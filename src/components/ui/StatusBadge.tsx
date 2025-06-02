@@ -1,4 +1,5 @@
 import type React from "react"
+import { cn } from "@/lib/utils"
 
 interface StatusBadgeProps {
   status: "success" | "warning" | "danger" | "info"
@@ -6,7 +7,7 @@ interface StatusBadgeProps {
   className?: string
 }
 
-const StatusBadge: React.FC<StatusBadgeProps> = ({ status, text, className = "" }) => {
+const StatusBadge: React.FC<StatusBadgeProps> = ({ status, text, className }) => {
   const statusClasses = {
     success: "bg-green-100 text-green-800",
     warning: "bg-yellow-100 text-yellow-800",
@@ -15,9 +16,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, text, className = "" 
   }
 
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClasses[status]} ${className}`}
-    >
+    <span className={cn("px-2.5 py-0.5 rounded-full text-xs font-medium", statusClasses[status], className)}>
       {text}
     </span>
   )

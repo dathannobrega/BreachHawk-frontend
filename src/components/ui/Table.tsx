@@ -1,19 +1,19 @@
 "use client"
 
 import type React from "react"
+import { cn } from "@/lib/utils"
 
 interface Column {
-  header: string
-  accessor: string
-  render?: (row: any) => React.ReactNode
+  key: string
+  label: string
+  render?: (value: any, row: any) => React.ReactNode
 }
 
 interface Action {
   label: string
   onClick: (item: any) => void
-  icon?: React.ReactNode
   className?: string
-  disabled?: (row: any) => boolean
+  disabled?: (item: any) => boolean
 }
 
 interface TableProps {
@@ -21,68 +21,70 @@ interface TableProps {
   data: any[]
   actions?: Action[]
   emptyMessage?: string
+  className?: string
 }
 
-const Table: React.FC<TableProps> = ({ columns, data, actions = [], emptyMessage = "Nenhum dado encontrado." }) => {
-  if (data.length === 0) {
-    return <div className="text-center py-8 text-gray-500">{emptyMessage}</div>
-  }
-
+const Table: React.FC<TableProps> = ({
+  columns,
+  data,
+  actions,
+  emptyMessage = "Nenhum dado encontrado.",
+  className,
+}) => {
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div className={cn("overflow-x-auto", className)}>
+      <table className="w-full text-sm text-left">
+        <thead className="text-xs uppercase bg-gray-50">
           <tr>
-            {columns.map((column, index) => (
-              <th
-                key={index}
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                {column.header}
+            {columns.map((column) => (
+              <th key={column.key} className="px-6 py-3">
+                {column.label}
               </th>
             ))}
-            {actions.length > 0 && (
-              <th scope="col" className="relative px-6 py-3">
-                <span className="sr-only">Ações</span>
-              </th>
-            )}
+            {actions && actions.length > 0 && <th className="px-6 py-3">Ações</th>}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {data.map((row, rowIndex) => (
-            <tr key={rowIndex} className="hover:bg-gray-50">
-              {columns.map((column, colIndex) => (
-                <td key={colIndex} className="px-6 py-4 whitespace-nowrap">
-                  {column.render ? column.render(row) : row[column.accessor]}
-                </td>
-              ))}
-              {actions.length > 0 && (
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex justify-end space-x-2">
-                    {actions.map((action, actionIndex) => {
-                      const isDisabled = action.disabled ? action.disabled(row) : false
-                      return (
-                        <button
-                          key={actionIndex}
-                          onClick={() => !isDisabled && action.onClick(row)}
-                          className={`${
-                            isDisabled
-                              ? "text-gray-300 cursor-not-allowed"
-                              : `text-primary hover:text-primary-dark ${action.className || ""}`
-                          }`}
-                          disabled={isDisabled}
-                        >
-                          {action.icon && <span className="mr-1">{action.icon}</span>}
-                          {action.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </td>
-              )}
+        <tbody>
+          {data.length > 0 ? (
+            data.map((row, rowIndex) => (
+              <tr key={rowIndex} className="bg-white border-b hover:bg-gray-50">
+                {columns.map((column) => (
+                  <td key={column.key} className="px-6 py-4">
+                    {column.render ? column.render(row[column.key], row) : row[column.key]}
+                  </td>
+                ))}
+                {actions && actions.length > 0 && (
+                  <td className="px-6 py-4">
+                    <div className="flex space-x-2">
+                      {actions.map((action, actionIndex) => {
+                        const isDisabled = action.disabled ? action.disabled(row) : false
+                        return (
+                          <button
+                            key={actionIndex}
+                            onClick={() => !isDisabled && action.onClick(row)}
+                            className={cn(
+                              "text-sm font-medium",
+                              isDisabled ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:underline",
+                              action.className,
+                            )}
+                            disabled={isDisabled}
+                          >
+                            {action.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))
+          ) : (
+            <tr className="bg-white border-b">
+              <td colSpan={columns.length + (actions ? 1 : 0)} className="px-6 py-4 text-center">
+                {emptyMessage}
+              </td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
     </div>

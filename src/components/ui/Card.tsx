@@ -1,4 +1,5 @@
 import type React from "react"
+import { cn } from "@/lib/utils"
 
 interface CardProps {
   title?: string
@@ -6,12 +7,12 @@ interface CardProps {
   className?: string
 }
 
-const Card: React.FC<CardProps> = ({ title, children, className = "" }) => {
+const Card: React.FC<CardProps> = ({ title, children, className }) => {
   return (
-    <div className={`bg-white rounded-lg shadow-md overflow-hidden ${className}`}>
+    <div className={cn("bg-white rounded-lg shadow-md overflow-hidden", className)}>
       {title && (
-        <div className="border-b border-gray-200 px-6 py-4">
-          <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+        <div className="px-6 py-4 border-b">
+          <h3 className="text-lg font-medium">{title}</h3>
         </div>
       )}
       <div className="p-6">{children}</div>

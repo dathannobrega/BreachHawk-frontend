@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { cn } from "@/lib/utils"
 import { Search } from "lucide-react"
 
 interface SearchInputProps {
@@ -10,15 +11,15 @@ interface SearchInputProps {
   className?: string
 }
 
-const SearchInput: React.FC<SearchInputProps> = ({ placeholder = "Buscar...", value, onChange, className = "" }) => {
+const SearchInput: React.FC<SearchInputProps> = ({ placeholder = "Buscar...", value, onChange, className }) => {
   return (
-    <div className={`relative ${className}`}>
+    <div className={cn("relative", className)}>
       <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-        <Search className="h-5 w-5 text-gray-400" />
+        <Search className="w-4 h-4 text-gray-500" />
       </div>
       <input
         type="text"
-        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}

@@ -129,9 +129,12 @@ const Sites: React.FC = () => {
   }
 
   return (
-    <div className="sites-page">
+    <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Sites</h1>
+        <div>
+          <h1 className="text-2xl font-bold mb-2">Sites</h1>
+          <p className="text-gray-600">Gerencie os sites monitorados pela plataforma</p>
+        </div>
         <Button onClick={() => setShowAddModal(true)}>Adicionar Site</Button>
       </div>
 
@@ -142,20 +145,20 @@ const Sites: React.FC = () => {
 
         <Table
           columns={[
-            { header: "URL", accessor: "url" },
+            { key: "url", label: "URL" },
             {
-              header: "Status",
-              accessor: "status",
-              render: (row) => (
+              key: "status",
+              label: "Status",
+              render: (value) => (
                 <StatusBadge
-                  status={row.status === "active" ? "success" : "danger"}
-                  text={row.status === "active" ? "Ativo" : "Inativo"}
+                  status={value === "active" ? "success" : "warning"}
+                  text={value === "active" ? "Ativo" : "Inativo"}
                 />
               ),
             },
-            { header: "Palavras-chave", accessor: "keywords" },
-            { header: "Última Verificação", accessor: "lastScan" },
-            { header: "Vazamentos", accessor: "leaks" },
+            { key: "keywords", label: "Palavras-chave" },
+            { key: "lastScan", label: "Última Verificação" },
+            { key: "leaks", label: "Vazamentos" },
           ]}
           data={currentSites}
           actions={[
@@ -166,7 +169,7 @@ const Sites: React.FC = () => {
             {
               label: "Excluir",
               onClick: openDeleteModal,
-              className: "text-red-600 hover:text-red-800",
+              className: "text-red-600",
             },
           ]}
           emptyMessage="Nenhum site encontrado."
@@ -180,26 +183,25 @@ const Sites: React.FC = () => {
       {/* Modal para adicionar site */}
       <Modal title="Adicionar Site" isOpen={showAddModal} onClose={() => setShowAddModal(false)}>
         <div className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="site-url" className="block text-sm font-medium text-gray-700">
+          <div>
+            <label htmlFor="site-url" className="block text-sm font-medium text-gray-700 mb-1">
               URL do Site
             </label>
             <input
               id="site-url"
               type="text"
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
               value={newSite.url}
               onChange={(e) => setNewSite({ ...newSite, url: e.target.value })}
               placeholder="ex: example.com"
+              className="w-full p-2 border border-gray-300 rounded-md"
             />
           </div>
-          <div className="space-y-2">
-            <label htmlFor="site-keywords" className="block text-sm font-medium text-gray-700">
+          <div>
+            <label htmlFor="site-keywords" className="block text-sm font-medium text-gray-700 mb-1">
               Palavras-chave (separadas por vírgula)
             </label>
             <textarea
               id="site-keywords"
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
               value={newSite.keywords.join(", ")}
               onChange={(e) =>
                 setNewSite({
@@ -208,29 +210,30 @@ const Sites: React.FC = () => {
                 })
               }
               placeholder="ex: senha, api_key, token"
+              className="w-full p-2 border border-gray-300 rounded-md"
               rows={3}
             />
           </div>
-          <div className="flex justify-end space-x-3 mt-6">
-            <Button variant="outline" onClick={() => setShowAddModal(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleAddSite}>Adicionar</Button>
-          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-6">
+          <Button onClick={handleAddSite}>Adicionar</Button>
+          <Button variant="outline" onClick={() => setShowAddModal(false)}>
+            Cancelar
+          </Button>
         </div>
       </Modal>
 
       {/* Modal para confirmar exclusão */}
       <Modal title="Confirmar Exclusão" isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-        <p className="mb-4">
+        <p>
           Tem certeza que deseja excluir o site <strong>{siteToDelete?.url}</strong>?
         </p>
-        <div className="flex justify-end space-x-3">
+        <div className="flex justify-end gap-2 mt-6">
+          <Button variant="destructive" onClick={handleDeleteSite}>
+            Excluir
+          </Button>
           <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
             Cancelar
-          </Button>
-          <Button variant="danger" onClick={handleDeleteSite}>
-            Excluir
           </Button>
         </div>
       </Modal>

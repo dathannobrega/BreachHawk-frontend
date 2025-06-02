@@ -1,7 +1,8 @@
 import type { AuthResponse, LoginCredentials, RegisterData, User } from "@/types/auth"
 import type { ApiResponse } from "@/types/api"
+import { config } from "@/config/app"
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1"
+const API_BASE_URL = config.apiBaseUrl
 
 class ApiClient {
   private baseURL: string
@@ -54,6 +55,14 @@ class ApiClient {
     const response = await this.request<AuthResponse>("/auth/register", {
       method: "POST",
       body: JSON.stringify(userData),
+    })
+    return response.data
+  }
+
+  async googleCallback(code: string): Promise<AuthResponse> {
+    const response = await this.request<AuthResponse>("/auth/google/callback", {
+      method: "POST",
+      body: JSON.stringify({ code }),
     })
     return response.data
   }

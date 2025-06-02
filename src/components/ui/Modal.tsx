@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useEffect } from "react"
+import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
 
 interface ModalProps {
@@ -10,9 +11,10 @@ interface ModalProps {
   title?: string
   children: React.ReactNode
   size?: "sm" | "md" | "lg" | "xl"
+  className?: string
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = "md" }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = "md", className }) => {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
@@ -26,7 +28,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     }
 
     return () => {
-      document.body.style.overflow = "auto"
+      document.body.style.overflow = ""
       window.removeEventListener("keydown", handleEscape)
     }
   }, [isOpen, onClose])
@@ -42,18 +44,20 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className={`bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col`}>
-        <div className="flex justify-between items-center p-4 border-b">
-          <h3 className="text-lg font-semibold">{title}</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 focus:outline-none"
-            aria-label="Fechar"
-          >
-            <X size={20} />
-          </button>
-        </div>
-        <div className="p-4 overflow-y-auto">{children}</div>
+      <div className={cn("bg-white rounded-lg shadow-xl w-full overflow-hidden", sizeClasses[size], className)}>
+        {title && (
+          <div className="flex items-center justify-between px-6 py-4 border-b">
+            <h3 className="text-lg font-medium">{title}</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+        <div className="p-6">{children}</div>
       </div>
     </div>
   )

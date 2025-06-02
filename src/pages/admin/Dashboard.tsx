@@ -2,14 +2,12 @@
 
 import type React from "react"
 import { useState } from "react"
-import { FaUsers, FaGlobe, FaKey, FaExclamationTriangle } from "react-icons/fa"
+import { Globe, Key, AlertTriangle, Users } from "lucide-react"
 import StatCard from "@/components/ui/StatCard"
 import Card from "@/components/ui/Card"
 import Table from "@/components/ui/Table"
-import { useAuth } from "@/hooks/useAuth"
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth()
   const [period, setPeriod] = useState("week")
 
   // Dados simulados
@@ -97,29 +95,29 @@ const Dashboard: React.FC = () => {
   ]
 
   return (
-    <div className="dashboard">
-      <div className="dashboard-header mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <div className="period-selector mt-4 flex space-x-2">
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <div className="flex items-center space-x-2 bg-white rounded-lg shadow-sm p-1">
           <button
-            className={`px-4 py-2 text-sm rounded-md ${
-              period === "day" ? "bg-primary text-white" : "bg-white text-gray-700 hover:bg-gray-100"
+            className={`px-3 py-1 text-sm rounded-md ${
+              period === "day" ? "bg-blue-100 text-blue-800" : "text-gray-600 hover:bg-gray-100"
             }`}
             onClick={() => setPeriod("day")}
           >
             Dia
           </button>
           <button
-            className={`px-4 py-2 text-sm rounded-md ${
-              period === "week" ? "bg-primary text-white" : "bg-white text-gray-700 hover:bg-gray-100"
+            className={`px-3 py-1 text-sm rounded-md ${
+              period === "week" ? "bg-blue-100 text-blue-800" : "text-gray-600 hover:bg-gray-100"
             }`}
             onClick={() => setPeriod("week")}
           >
             Semana
           </button>
           <button
-            className={`px-4 py-2 text-sm rounded-md ${
-              period === "month" ? "bg-primary text-white" : "bg-white text-gray-700 hover:bg-gray-100"
+            className={`px-3 py-1 text-sm rounded-md ${
+              period === "month" ? "bg-blue-100 text-blue-800" : "text-gray-600 hover:bg-gray-100"
             }`}
             onClick={() => setPeriod("month")}
           >
@@ -128,32 +126,32 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <StatCard
           title="Sites Monitorados"
           value={stats.sites}
-          icon={<FaGlobe className="h-6 w-6 text-blue-500" />}
+          icon={<Globe className="w-5 h-5" />}
           trend="+5%"
           trendUp={true}
         />
         <StatCard
           title="Palavras-chave"
           value={stats.keywords}
-          icon={<FaKey className="h-6 w-6 text-yellow-500" />}
+          icon={<Key className="w-5 h-5" />}
           trend="+12%"
           trendUp={true}
         />
         <StatCard
           title="Vazamentos Detectados"
           value={stats.leaks}
-          icon={<FaExclamationTriangle className="h-6 w-6 text-red-500" />}
+          icon={<AlertTriangle className="w-5 h-5" />}
           trend="-3%"
           trendUp={false}
         />
         <StatCard
           title="Usuários"
           value={stats.users}
-          icon={<FaUsers className="h-6 w-6 text-green-500" />}
+          icon={<Users className="w-5 h-5" />}
           trend="+2%"
           trendUp={true}
         />
@@ -163,25 +161,21 @@ const Dashboard: React.FC = () => {
         <Card title="Vazamentos Recentes">
           <Table
             columns={[
-              { header: "Site", accessor: "site" },
-              { header: "Palavra-chave", accessor: "keyword" },
-              { header: "Data", accessor: "date" },
+              { key: "site", label: "Site" },
+              { key: "keyword", label: "Palavra-chave" },
+              { key: "date", label: "Data" },
               {
-                header: "Severidade",
-                accessor: "severity",
-                render: (row) => (
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      row.severity === "high"
-                        ? "bg-red-100 text-red-800"
-                        : row.severity === "medium"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-blue-100 text-blue-800"
-                    }`}
-                  >
-                    {row.severity === "high" ? "Alta" : row.severity === "medium" ? "Média" : "Baixa"}
-                  </span>
-                ),
+                key: "severity",
+                label: "Severidade",
+                render: (value) => {
+                  const severityMap = {
+                    high: { label: "Alta", status: "danger" },
+                    medium: { label: "Média", status: "warning" },
+                    low: { label: "Baixa", status: "info" },
+                  }
+                  const severity = severityMap[value as keyof typeof severityMap]
+                  return <span className={`severity ${value}`}>{severity.label}</span>
+                },
               },
             ]}
             data={recentLeaks}
@@ -197,22 +191,16 @@ const Dashboard: React.FC = () => {
         <Card title="Sites Recentes">
           <Table
             columns={[
-              { header: "URL", accessor: "url" },
+              { key: "url", label: "URL" },
               {
-                header: "Status",
-                accessor: "status",
-                render: (row) => (
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      row.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {row.status === "active" ? "Ativo" : "Inativo"}
-                  </span>
+                key: "status",
+                label: "Status",
+                render: (value) => (
+                  <span className={`status ${value}`}>{value === "active" ? "Ativo" : "Inativo"}</span>
                 ),
               },
-              { header: "Palavras-chave", accessor: "keywords" },
-              { header: "Última Verificação", accessor: "lastScan" },
+              { key: "keywords", label: "Palavras-chave" },
+              { key: "lastScan", label: "Última Verificação" },
             ]}
             data={recentSites}
             actions={[
