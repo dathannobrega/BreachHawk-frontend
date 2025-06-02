@@ -1,14 +1,11 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   darkMode: ["class"],
   content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/**/*.{js,ts,jsx,tsx,mdx}",
-    "*.{js,ts,jsx,tsx,mdx}",
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
     "*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
@@ -28,17 +25,11 @@ module.exports = {
         foreground: "hsl(var(--foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-          DEFAULT: "#3b82f6",
-          dark: "#2563eb",
-          light: "#60a5fa",
+          foreground: "hsl(var(--foreground))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
-          DEFAULT: "#10b981",
-          dark: "#059669",
-          light: "#34d399",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -60,30 +51,6 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        background: {
-          DEFAULT: "#f9fafb",
-          dark: "#111827",
-        },
-        border: {
-          DEFAULT: "#e5e7eb",
-          dark: "#374151",
-        },
-        success: {
-          DEFAULT: "#10b981",
-          dark: "#059669",
-        },
-        danger: {
-          DEFAULT: "#ef4444",
-          dark: "#dc2626",
-        },
-        warning: {
-          DEFAULT: "#f59e0b",
-          dark: "#d97706",
-        },
-        info: {
-          DEFAULT: "#3b82f6",
-          dark: "#2563eb",
-        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -92,25 +59,19 @@ module.exports = {
       },
       keyframes: {
         "accordion-down": {
-          from: { height: "0" },
+          from: { height: 0 },
           to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
           from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
+          to: { height: 0 },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
-      fontFamily: {
-        sans: ["Inter", "sans-serif"],
-      },
-      boxShadow: {
-        card: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-      },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [],
 }
