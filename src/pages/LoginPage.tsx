@@ -10,7 +10,7 @@ import type { LoginCredentials } from "@/types/auth"
 
 export const LoginPage: React.FC = () => {
   const [mode, setMode] = useState<"login" | "register">("login")
-  const { login, register, loading, error, isAuthenticated } = useAuth()
+  const { login, register, loginWithGoogle, loading, error, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -41,6 +41,15 @@ export const LoginPage: React.FC = () => {
     }
   }
 
+  const handleGoogleAuth = async () => {
+    try {
+      await loginWithGoogle()
+      // Navigation will be handled by the useEffect above
+    } catch (err) {
+      console.error("Google authentication failed:", err)
+    }
+  }
+
   // Don't render if already authenticated (prevents flash)
   if (isAuthenticated) {
     return null
@@ -49,7 +58,14 @@ export const LoginPage: React.FC = () => {
   return (
     <AuthLayout>
       <div className="w-full max-w-md">
-        <AuthForm mode={mode} onSubmit={handleSubmit} loading={loading} error={error} onModeChange={setMode} />
+        <AuthForm
+          mode={mode}
+          onSubmit={handleSubmit}
+          onGoogleAuth={handleGoogleAuth}
+          loading={loading}
+          error={error}
+          onModeChange={setMode}
+        />
       </div>
     </AuthLayout>
   )

@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import type { User, LoginCredentials, RegisterData } from "@/types/auth"
 import { auth } from "@/lib/auth"
+import type { User, LoginCredentials, RegisterData } from "@/types/auth"
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(auth.getCurrentUser())
@@ -10,17 +10,24 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const unsubscribe = auth.subscribe(setUser)
-    return unsubscribe
+    // Subscribe to auth changes
+    const unsubscribe = auth.subscribe((newUser) => {
+      setUser(newUser)
+    })
+
+    return () => {
+      unsubscribe()
+    }
   }, [])
 
   const login = async (credentials: LoginCredentials) => {
     setLoading(true)
     setError(null)
     try {
-      await auth.login(credentials)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed")
+      const user = await auth.login(credentials)
+      return user
+    } catch (err: any) {
+      setError(err.message || "Falha ao fazer login. Verifique suas credenciais.")
       throw err
     } finally {
       setLoading(false)
@@ -31,9 +38,10 @@ export function useAuth() {
     setLoading(true)
     setError(null)
     try {
-      await auth.register(userData)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed")
+      const user = await auth.register(userData)
+      return user
+    } catch (err: any) {
+      setError(err.message || "Falha ao registrar. Tente novamente.")
       throw err
     } finally {
       setLoading(false)
@@ -44,9 +52,10 @@ export function useAuth() {
     setLoading(true)
     setError(null)
     try {
-      await auth.loginWithGoogle()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Google login failed")
+      const user = await auth.loginWithGoogle()
+      return user
+    } catch (err: any) {
+      setError(err.message || "Falha ao fazer login com Google. Tente novamente.")
       throw err
     } finally {
       setLoading(false)
@@ -57,8 +66,8 @@ export function useAuth() {
     setLoading(true)
     try {
       await auth.logout()
-    } catch (err) {
-      console.error("Logout error:", err)
+    } catch (err: any) {
+      console.error("Logout failed:", err)
     } finally {
       setLoading(false)
     }
@@ -66,12 +75,12 @@ export function useAuth() {
 
   return {
     user,
-    loading,
-    error,
     login,
     register,
     loginWithGoogle,
     logout,
-    isAuthenticated: auth.isAuthenticated(),
+    loading,
+    error,
+    isAuthenticated: !!user,
   }
 }

@@ -2,11 +2,11 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/atoms/Button/Button"
+import { Input } from "@/components/atoms/Input/Input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Shield } from 'lucide-react'
+import { Eye, EyeOff, Shield } from "lucide-react"
 import { FaGoogle } from "react-icons/fa"
 
 interface AuthFormProps {
@@ -18,13 +18,13 @@ interface AuthFormProps {
   onModeChange: (mode: "login" | "register") => void
 }
 
-export const AuthForm: React.FC<AuthFormProps> = ({ 
-  mode, 
-  onSubmit, 
-  onGoogleAuth, 
-  loading = false, 
-  error, 
-  onModeChange 
+export const AuthForm: React.FC<AuthFormProps> = ({
+  mode,
+  onSubmit,
+  onGoogleAuth,
+  loading = false,
+  error,
+  onModeChange,
 }) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -35,6 +35,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const validateForm = () => {
     const errors: Record<string, string> = {}
@@ -91,9 +92,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({
 
   const handleGoogleAuth = async () => {
     try {
+      setGoogleLoading(true)
       await onGoogleAuth()
     } catch (err) {
-      // Error is handled by parent component
+      console.error("Google auth failed:", err)
+    } finally {
+      setGoogleLoading(false)
     }
   }
 
@@ -122,12 +126,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         <Button
           type="button"
           variant="outline"
-          className="w-full"
+          className="w-full flex items-center justify-center"
           onClick={handleGoogleAuth}
-          disabled={loading}
+          disabled={loading || googleLoading}
         >
           <FaGoogle className="mr-2 h-4 w-4" />
-          {mode === "login" ? "Entrar com Google" : "Registrar com Google"}
+          {googleLoading ? "Carregando..." : mode === "login" ? "Entrar com Google" : "Registrar com Google"}
         </Button>
 
         <div className="relative">
@@ -146,17 +150,16 @@ export const AuthForm: React.FC<AuthFormProps> = ({
                 Nome completo
               </label>
               <Input
-                id="name"
                 type="text"
+                id="name"
                 placeholder="Seu nome"
                 value={formData.name}
                 onChange={(e) => handleInputChange("name", e.target.value)}
+                error={validationErrors.name}
                 required
                 autoComplete="name"
               />
-              {validationErrors.name && (
-                <p className="text-sm text-destructive">{validationErrors.name}</p>
-              )}
+              {validationErrors.name && <p className="text-sm text-destructive">{validationErrors.name}</p>}
             </div>
           )}
 
@@ -165,17 +168,16 @@ export const AuthForm: React.FC<AuthFormProps> = ({
               Email
             </label>
             <Input
-              id="email"
               type="email"
+              id="email"
               placeholder="seu@email.com"
               value={formData.email}
               onChange={(e) => handleInputChange("email", e.target.value)}
+              error={validationErrors.email}
               required
               autoComplete="email"
             />
-            {validationErrors.email && (
-              <p className="text-sm text-destructive">{validationErrors.email}</p>
-            )}
+            {validationErrors.email && <p className="text-sm text-destructive">{validationErrors.email}</p>}
           </div>
 
           <div className="space-y-2">
@@ -184,11 +186,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({
             </label>
             <div className="relative">
               <Input
-                id="password"
                 type={showPassword ? "text" : "password"}
+                id="password"
                 placeholder="Sua senha"
                 value={formData.password}
                 onChange={(e) => handleInputChange("password", e.target.value)}
+                error={validationErrors.password}
                 required
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
               />
@@ -201,9 +204,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            {validationErrors.password && (
-              <p className="text-sm text-destructive">{validationErrors.password}</p>
-            )}
+            {validationErrors.password && <p className="text-sm text-destructive">{validationErrors.password}</p>}
           </div>
 
           {mode === "register" && (
@@ -213,11 +214,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({
               </label>
               <div className="relative">
                 <Input
-                  id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
+                  id="confirmPassword"
                   placeholder="Confirme sua senha"
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                  error={validationErrors.confirmPassword}
                   required
                   autoComplete="new-password"
                 />
@@ -236,7 +238,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full" loading={loading} disabled={loading || googleLoading}>
             {loading ? "Carregando..." : mode === "login" ? "Entrar" : "Criar Conta"}
           </Button>
 
