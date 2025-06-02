@@ -1,5 +1,6 @@
 import type { User, LoginCredentials, RegisterData } from "@/types/auth"
 import { apiClient } from "./api"
+import { googleAuth, type GoogleUser } from "./auth-google"
 
 class AuthService {
   private user: User | null = null
@@ -62,9 +63,23 @@ class AuthService {
     }
   }
 
+  async loginWithGoogle(): Promise<User> {
+    try {
+      const googleUser: GoogleUser = await googleAuth.signIn()
+      const response = await apiClient.googleAuth(googleUser)
+      localStorage.setItem("access_token", response.access_token)
+      this.setUser(response.user)
+      return response.user
+    } catch (error) {
+      console.error("Google login failed:", error)
+      throw error
+    }
+  }
+
   async logout(): Promise<void> {
     try {
       await apiClient.logout()
+      await googleAuth.signOut()
     } catch (error) {
       console.error("Logout failed:", error)
     } finally {

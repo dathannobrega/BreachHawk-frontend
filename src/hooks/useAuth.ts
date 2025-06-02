@@ -40,6 +40,19 @@ export function useAuth() {
     }
   }
 
+  const loginWithGoogle = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      await auth.loginWithGoogle()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google login failed")
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const logout = async () => {
     setLoading(true)
     try {
@@ -57,6 +70,7 @@ export function useAuth() {
     error,
     login,
     register,
+    loginWithGoogle,
     logout,
     isAuthenticated: auth.isAuthenticated(),
   }
