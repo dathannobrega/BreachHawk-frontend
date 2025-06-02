@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import Card from "../components/ui/Card"
+import Card from "../components/ui/card"
 import Table from "../components/ui/Table"
 import Modal from "../components/ui/Modal"
-import Button from "../components/ui/Button"
+import Button from "../components/ui/button"
 import SearchInput from "../components/ui/SearchInput"
 import Pagination from "../components/ui/Pagination"
 import StatusBadge from "../components/ui/StatusBadge"

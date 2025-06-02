@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { FaPlay, FaEye, FaRedo } from "react-icons/fa"
-import Button from "../components/ui/Button"
+import Button from "../components/ui/button"
 import Table from "../components/ui/Table"
 import StatusBadge from "../components/ui/StatusBadge"
 import Modal from "../components/ui/Modal"

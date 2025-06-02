@@ -1,7 +1,7 @@
 import React, { useState } from "react"
 import { FaUsers, FaGlobe, FaKey, FaExclamationTriangle } from "react-icons/fa"
 import StatCard from "../components/ui/StatCard"
-import Card from "../components/ui/Card"
+import Card from "../components/ui/card"
 import Table from "../components/ui/Table"
 import "../styles/pages/dashboard.css"
 
