@@ -23,21 +23,15 @@ RUN npm run build
 # ==============================
 # Etapa 2: Servir com Nginx
 # ==============================
-FROM nginx:alpine
+FROM nginx:stable-alpine
 
-# Remove o conteúdo padrão do Nginx
-RUN rm -rf /usr/share/nginx/html/*
-
-# Copia o build gerado na etapa anterior para a pasta de servidos do Nginx
+# Copia o build gerado do frontend para a pasta padrão do Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# (Opcional) Se você quiser personalizar configurações do Nginx,
-# crie um arquivo nginx.conf e copie aqui. Exemplo mínimo já serve sem precisar:
-#
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copia o arquivo nginx.conf customizado para sobrescrever o default
+COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expõe a porta 80
 EXPOSE 80
 
-# Comando padrão: inicia o Nginx no foreground
 CMD ["nginx", "-g", "daemon off;"]

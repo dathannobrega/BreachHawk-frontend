@@ -1,11 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react"
+import { Link, useNavigate, useLocation } from "react-router-dom"
 import { FaShieldAlt, FaLock, FaUser } from "react-icons/fa"
 import { useAuth } from "../../context/AuthContext.jsx"
 import Button from "../../components/ui/button.jsx"
 import "../../styles/pages/login.css"
+
+const apiUrl = import.meta.env.VITE_API_URL
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -14,15 +16,29 @@ const Login = () => {
   })
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
+
+  // 1. Se existir ?token=<JWT> na URL, captura e faz login automático
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const token = params.get("token")
+    if (token) {
+      // Armazena o token e marca o usuário como autenticado
+      login({ token })
+      // Limpa query string e redireciona para dashboard
+      navigate("/dashboard", { replace: true })
+    }
+  }, [location.search])
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData({
-      ...formData,
-      [name]: value,
-    })
+    setFormData({ ...formData, [name]: value })
+    if (error) {
+      setError("")
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -31,99 +47,105 @@ const Login = () => {
     setLoading(true)
 
     try {
-      // Simulação de login
-      if (formData.username === "admin" && formData.password === "admin") {
-        login({ username: formData.username, role: "admin" })
-        navigate("/dashboard")
-      } else if (formData.username === "user" && formData.password === "user") {
-        login({ username: formData.username, role: "user" })
-        navigate("/user/dashboard")
-      } else {
-        setError("Credenciais inválidas. Tente admin/admin ou user/user.")
+      // Chama o endpoint de login tradicional no backend
+      const resp = await fetch(`${apiUrl}/api/v1/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: formData.username,
+          password: formData.password,
+        }),
+      })
+      if (!resp.ok) {
+        const errJson = await resp.json()
+        throw new Error(errJson.detail || "Falha no login")
       }
+      const data = await resp.json()
+      // Supondo que o backend retorne { access_token: "...", user: { ... } }
+      login({
+        token: data.access_token,
+        user: data.user,
+      })
+      navigate("/dashboard")
     } catch (err) {
-      setError("Erro ao fazer login. Tente novamente.")
+      setError(err.message || "Erro ao fazer login. Tente novamente.")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <div className="login-logo">
-            <FaShieldAlt className="logo-icon" />
-            <h1>Deep Protexion</h1>
-          </div>
-          <p className="login-subtitle">Faça login para acessar o painel</p>
-        </div>
-
-        {error && <div className="error-message">{error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">
-              <FaUser className="input-icon" />
-              Usuário
-            </label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-              placeholder="Digite seu usuário"
-            />
+      <div className="login-container">
+        <div className="login-card">
+          <div className="login-header">
+            <h2>
+              <FaShieldAlt /> Login
+            </h2>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">
-              <FaLock className="input-icon" />
-              Senha
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="Digite sua senha"
-            />
-          </div>
+          {error && <div className="error-message">{error}</div>}
 
-          <div className="form-options">
-            <div className="remember-me">
-              <input type="checkbox" id="remember" />
-              <label htmlFor="remember">Lembrar-me</label>
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="form-group">
+              <label htmlFor="username">
+                <FaUser /> Usuário
+              </label>
+              <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="Digite seu usuário"
+                  required
+              />
             </div>
-            <a href="#" className="forgot-password">
-              Esqueceu a senha?
+
+            <div className="form-group">
+              <label htmlFor="password">
+                <FaLock /> Senha
+              </label>
+              <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Digite sua senha"
+                  required
+              />
+            </div>
+
+            <Button type="submit" variant="primary" fullWidth disabled={loading}>
+              {loading ? "Entrando..." : "Entrar"}
+            </Button>
+          </form>
+
+          {/* Botão de Login com Google */}
+          <div className="login-google">
+            <a
+                href={`${apiUrl}/api/v1/auth/login/google`}
+                className="google-button"
+            >
+              Entrar com Google
             </a>
           </div>
 
-          <Button type="submit" variant="primary" fullWidth disabled={loading}>
-            {loading ? "Entrando..." : "Entrar"}
-          </Button>
-        </form>
+          <div className="login-footer">
+            <p>
+              Não tem uma conta? <Link to="/register">Registre-se</Link>
+            </p>
+          </div>
 
-        <div className="login-footer">
-          <p>
-            Não tem uma conta? <Link to="/register">Registre-se</Link>
-          </p>
+          <div className="login-info">
+            <p>
+              <strong>Credenciais de teste:</strong>
+            </p>
+            <p>Admin: admin/admin</p>
+            <p>Usuário: user/user</p>
+          </div>
         </div>
       </div>
-
-      <div className="login-info">
-        <p>
-          <strong>Credenciais de teste:</strong>
-        </p>
-        <p>Admin: admin/admin</p>
-        <p>Usuário: user/user</p>
-      </div>
-    </div>
   )
 }
 
