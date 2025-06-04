@@ -15,12 +15,14 @@ import { useAuth } from "@/contexts/auth-context"
 import { useLanguage } from "@/contexts/language-context"
 
 export default function LoginPage() {
+  // Todos os hooks devem ser chamados no início do componente, antes de qualquer lógica condicional
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   })
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [isLanguageContextReady, setIsLanguageContextReady] = useState(false)
 
   const { login, loginWithToken, isAuthenticated } = useAuth()
   const { language, setLanguage, t } = useLanguage()
@@ -29,37 +31,12 @@ export default function LoginPage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
-  const [isLanguageContextReady, setIsLanguageContextReady] = useState(false)
-
+  // Verificar se o contexto de idioma está pronto
   useEffect(() => {
     if (t && t.auth && t.auth.login) {
       setIsLanguageContextReady(true)
     }
   }, [t])
-
-  if (!isLanguageContextReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                <div className="h-10 bg-gray-200 rounded"></div>
-              </div>
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                <div className="h-10 bg-gray-200 rounded"></div>
-              </div>
-              <div className="h-10 bg-gray-200 rounded"></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
 
   // Verificar se há token na URL (OAuth callback)
   useEffect(() => {
@@ -118,6 +95,32 @@ export default function LoginPage() {
     setLanguage(language === "pt" ? "en" : "pt")
   }
 
+  // Renderização condicional após todos os hooks
+  if (!isLanguageContextReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Renderização principal
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
