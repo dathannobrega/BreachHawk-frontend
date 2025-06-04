@@ -38,7 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+  // Usa a URL da API do ambiente ou, se estiver em produção, ajusta para usar a mesma origem
+  const apiUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    (typeof window !== "undefined" && window.location.hostname === "www.protexion.cloud"
+      ? "https://www.protexion.cloud/api"
+      : "https://dev.protexion.cloud")
 
   useEffect(() => {
     // Verificar se há token salvo no localStorage
