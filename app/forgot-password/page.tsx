@@ -3,31 +3,28 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Shield, Mail, ArrowLeft } from "lucide-react"
+import { Shield, Mail, ArrowLeft, Globe } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
-  const router = useRouter()
 
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    (typeof window !== "undefined" && window.location.hostname === "www.protexion.cloud"
-      ? "https://www.protexion.cloud/api"
-      : "https://dev.protexion.cloud")
+  const { language, setLanguage, t } = useLanguage()
+  const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStatus("loading")
     setError("")
+    setLoading(true)
 
     try {
       const response = await fetch(`${apiUrl}/api/v1/auth/forgot-password`, {
@@ -38,77 +35,93 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || "Erro ao processar solicitação")
+      if (response.ok) {
+        setSuccess(true)
+      } else {
+        throw new Error(language === "pt" ? "Erro ao enviar e-mail" : "Error sending email")
       }
-
-      setStatus("success")
     } catch (err: any) {
-      setStatus("error")
-      setError(err.message || "Ocorreu um erro. Tente novamente.")
+      setError(
+        err.message ||
+          (language === "pt"
+            ? "Erro ao enviar instruções. Tente novamente."
+            : "Error sending instructions. Please try again."),
+      )
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const toggleLanguage = () => {
+    setLanguage(language === "pt" ? "en" : "pt")
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <Shield className="h-8 w-8 text-blue-600 mr-2" />
-            <CardTitle className="text-2xl font-bold">BreachHawk</CardTitle>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Shield className="h-8 w-8 text-blue-600 mr-2" />
+              <CardTitle className="text-2xl font-bold">{t("auth.forgotPassword.title")}</CardTitle>
+            </div>
+            <Button variant="ghost" size="sm" onClick={toggleLanguage}>
+              <Globe className="h-4 w-4 mr-1" />
+              {language === "pt" ? "EN" : "PT"}
+            </Button>
           </div>
-          <CardDescription className="text-center">Recuperação de senha</CardDescription>
+          <CardDescription className="text-center">{t("auth.forgotPassword.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          {status === "error" && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {status === "success" ? (
+          {success ? (
             <div className="space-y-4">
-              <Alert className="mb-4 bg-green-50 border-green-200">
-                <AlertDescription className="text-green-800">
-                  Se o e-mail estiver cadastrado, você receberá instruções para redefinir a senha.
-                </AlertDescription>
+              <Alert>
+                <AlertDescription>{t("auth.forgotPassword.success")}</AlertDescription>
               </Alert>
-              <Button asChild className="w-full">
-                <Link href="/login">
+              <Link href="/login">
+                <Button className="w-full">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar para o login
-                </Link>
-              </Button>
+                  {t("auth.forgotPassword.back")}
+                </Button>
+              </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  E-mail
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Digite seu e-mail cadastrado"
-                  required
-                />
-              </div>
+            <>
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-              <Button type="submit" className="w-full" disabled={status === "loading"}>
-                {status === "loading" ? "Enviando..." : "Enviar instruções"}
-              </Button>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    {t("auth.forgotPassword.email")}
+                  </Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t("auth.forgotPassword.emailPlaceholder")}
+                    required
+                  />
+                </div>
 
-              <div className="text-center mt-4">
-                <Link href="/login" className="text-sm text-blue-600 hover:underline flex items-center justify-center">
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Voltar para o login
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? t("auth.forgotPassword.sending") : t("auth.forgotPassword.send")}
+                </Button>
+              </form>
+
+              <div className="mt-6 text-center">
+                <Link href="/login" className="text-sm text-blue-600 hover:underline">
+                  <ArrowLeft className="h-4 w-4 mr-1 inline" />
+                  {t("auth.forgotPassword.back")}
                 </Link>
               </div>
-            </form>
+            </>
           )}
         </CardContent>
       </Card>

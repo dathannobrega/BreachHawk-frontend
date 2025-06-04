@@ -10,40 +10,56 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Shield, Lock, ArrowLeft, CheckCircle } from "lucide-react"
+import { Shield, Lock, Check, Globe } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function ResetPasswordPage() {
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error" | "invalid-token">("idle")
-  const [error, setError] = useState("")
+  const [formData, setFormData] = useState({
+    password: "",
+    confirmPassword: "",
+  })
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [token, setToken] = useState("")
+
+  const { language, setLanguage, t } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const token = searchParams.get("token")
-
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    (typeof window !== "undefined" && window.location.hostname === "www.protexion.cloud"
-      ? "https://www.protexion.cloud/api"
-      : "https://dev.protexion.cloud")
+  const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
   useEffect(() => {
-    if (!token) {
-      setStatus("invalid-token")
-      setError("Token de redefinição inválido ou ausente.")
+    const tokenParam = searchParams.get("token")
+    if (tokenParam) {
+      setToken(tokenParam)
+    } else {
+      setErrors({ token: t("auth.resetPassword.errors.invalidToken") })
     }
-  }, [token])
+  }, [searchParams])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData({ ...formData, [name]: value })
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" })
+    }
+  }
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+    if (!formData.password) newErrors.password = t("auth.resetPassword.errors.passwordRequired")
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = t("auth.resetPassword.errors.passwordMismatch")
+    }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateForm()) return
 
-    if (password !== confirmPassword) {
-      setError("As senhas não coincidem.")
-      return
-    }
-
-    setStatus("loading")
-    setError("")
+    setLoading(true)
 
     try {
       const response = await fetch(`${apiUrl}/api/v1/auth/reset-password`, {
@@ -51,39 +67,51 @@ export default function ResetPasswordPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ token, new_password: password }),
+        body: JSON.stringify({
+          token,
+          new_password: formData.password,
+        }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || "Erro ao redefinir senha")
+      if (response.ok) {
+        setSuccess(true)
+        setTimeout(() => {
+          router.push("/login")
+        }, 3000)
+      } else {
+        const data = await response.json()
+        throw new Error(data.detail || t("auth.resetPassword.errors.invalidToken"))
       }
-
-      setStatus("success")
     } catch (err: any) {
-      setStatus("error")
-      setError(err.message || "Ocorreu um erro. Tente novamente.")
+      setErrors({
+        submit:
+          err.message ||
+          (language === "pt"
+            ? "Erro ao redefinir senha. Tente novamente."
+            : "Error resetting password. Please try again."),
+      })
+    } finally {
+      setLoading(false)
     }
   }
 
-  if (status === "invalid-token") {
+  const toggleLanguage = () => {
+    setLanguage(language === "pt" ? "en" : "pt")
+  }
+
+  if (errors.token) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <div className="flex items-center justify-center mb-4">
-              <Shield className="h-8 w-8 text-blue-600 mr-2" />
-              <CardTitle className="text-2xl font-bold">BreachHawk</CardTitle>
-            </div>
-            <CardDescription className="text-center">Redefinição de senha</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
+          <CardContent className="pt-6">
+            <Alert variant="destructive">
+              <AlertDescription>{errors.token}</AlertDescription>
             </Alert>
-            <Button asChild className="w-full">
-              <Link href="/forgot-password">Solicitar nova redefinição</Link>
-            </Button>
+            <div className="mt-4 text-center">
+              <Link href="/forgot-password" className="text-blue-600 hover:underline">
+                {language === "pt" ? "Solicitar nova recuperação" : "Request new recovery"}
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -94,80 +122,76 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <Shield className="h-8 w-8 text-blue-600 mr-2" />
-            <CardTitle className="text-2xl font-bold">BreachHawk</CardTitle>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Shield className="h-8 w-8 text-blue-600 mr-2" />
+              <CardTitle className="text-2xl font-bold">{t("auth.resetPassword.title")}</CardTitle>
+            </div>
+            <Button variant="ghost" size="sm" onClick={toggleLanguage}>
+              <Globe className="h-4 w-4 mr-1" />
+              {language === "pt" ? "EN" : "PT"}
+            </Button>
           </div>
-          <CardDescription className="text-center">Redefinição de senha</CardDescription>
+          <CardDescription className="text-center">{t("auth.resetPassword.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          {status === "error" && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {status === "success" ? (
+          {success ? (
             <div className="space-y-4">
-              <div className="flex flex-col items-center justify-center py-4">
-                <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-                <h3 className="text-xl font-medium text-center">Senha redefinida com sucesso!</h3>
-                <p className="text-center text-gray-600 mt-2">
-                  Sua senha foi alterada. Agora você pode fazer login com sua nova senha.
-                </p>
+              <Alert>
+                <AlertDescription>{t("auth.resetPassword.success")}</AlertDescription>
+              </Alert>
+              <div className="text-center text-sm text-muted-foreground">
+                {language === "pt" ? "Redirecionando para o login..." : "Redirecting to login..."}
               </div>
-              <Button asChild className="w-full">
-                <Link href="/login">Ir para o login</Link>
-              </Button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password" className="flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  Nova senha
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Digite sua nova senha"
-                  required
-                  minLength={8}
-                />
-              </div>
+            <>
+              {errors.submit && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{errors.submit}</AlertDescription>
+                </Alert>
+              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  Confirme a senha
-                </Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirme sua nova senha"
-                  required
-                  minLength={8}
-                />
-                {password !== confirmPassword && confirmPassword && (
-                  <p className="text-sm text-red-500 mt-1">As senhas não coincidem</p>
-                )}
-              </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    {t("auth.resetPassword.password")}
+                  </Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder={t("auth.resetPassword.passwordPlaceholder")}
+                    className={errors.password ? "border-red-500" : ""}
+                  />
+                  {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+                </div>
 
-              <Button type="submit" className="w-full" disabled={status === "loading" || password !== confirmPassword}>
-                {status === "loading" ? "Redefinindo..." : "Redefinir senha"}
-              </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="flex items-center gap-2">
+                    <Check className="h-4 w-4" />
+                    {t("auth.resetPassword.confirmPassword")}
+                  </Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder={t("auth.resetPassword.confirmPasswordPlaceholder")}
+                    className={errors.confirmPassword ? "border-red-500" : ""}
+                  />
+                  {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+                </div>
 
-              <div className="text-center mt-4">
-                <Link href="/login" className="text-sm text-blue-600 hover:underline flex items-center justify-center">
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Voltar para o login
-                </Link>
-              </div>
-            </form>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? t("auth.resetPassword.resetting") : t("auth.resetPassword.reset")}
+                </Button>
+              </form>
+            </>
           )}
         </CardContent>
       </Card>

@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Shield, User, Lock, Chrome } from "lucide-react"
+import { Shield, User, Lock, Chrome, Globe } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -22,6 +23,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   const { login, loginWithToken, isAuthenticated } = useAuth()
+  const { language, setLanguage, t } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -42,7 +44,7 @@ export default function LoginPage() {
           loginWithToken({ token, user: userData })
         })
         .catch(() => {
-          setError("Erro ao fazer login com Google")
+          setError(language === "pt" ? "Erro ao fazer login com Google" : "Error signing in with Google")
         })
     }
   }, [searchParams])
@@ -68,7 +70,9 @@ export default function LoginPage() {
     try {
       await login(formData)
     } catch (err: any) {
-      setError(err.message || "Erro ao fazer login. Tente novamente.")
+      setError(
+        err.message || (language === "pt" ? "Erro ao fazer login. Tente novamente." : "Login error. Please try again."),
+      )
     } finally {
       setLoading(false)
     }
@@ -78,17 +82,25 @@ export default function LoginPage() {
     window.location.href = `${apiUrl}/api/v1/auth/login/google`
   }
 
+  const toggleLanguage = () => {
+    setLanguage(language === "pt" ? "en" : "pt")
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <Shield className="h-8 w-8 text-blue-600 mr-2" />
-            <CardTitle className="text-2xl font-bold">BreachHawk</CardTitle>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Shield className="h-8 w-8 text-blue-600 mr-2" />
+              <CardTitle className="text-2xl font-bold">{t("auth.login.title")}</CardTitle>
+            </div>
+            <Button variant="ghost" size="sm" onClick={toggleLanguage}>
+              <Globe className="h-4 w-4 mr-1" />
+              {language === "pt" ? "EN" : "PT"}
+            </Button>
           </div>
-          <CardDescription className="text-center">
-            Entre na sua conta para acessar o painel de controle
-          </CardDescription>
+          <CardDescription className="text-center">{t("auth.login.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -101,7 +113,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label htmlFor="username" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                Usuário
+                {t("auth.login.username")}
               </Label>
               <Input
                 id="username"
@@ -109,7 +121,7 @@ export default function LoginPage() {
                 type="text"
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="Digite seu usuário"
+                placeholder={t("auth.login.usernamePlaceholder")}
                 required
               />
             </div>
@@ -117,7 +129,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label htmlFor="password" className="flex items-center gap-2">
                 <Lock className="h-4 w-4" />
-                Senha
+                {t("auth.login.password")}
               </Label>
               <Input
                 id="password"
@@ -125,18 +137,18 @@ export default function LoginPage() {
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Digite sua senha"
+                placeholder={t("auth.login.passwordPlaceholder")}
                 required
               />
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? t("auth.login.loggingIn") : t("auth.login.loginButton")}
             </Button>
 
             <div className="text-center mt-2">
               <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                Esqueci minha senha
+                {t("auth.login.forgotPassword")}
               </Link>
             </div>
           </form>
@@ -147,27 +159,27 @@ export default function LoginPage() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Ou</span>
+                <span className="bg-background px-2 text-muted-foreground">{t("auth.login.or")}</span>
               </div>
             </div>
 
             <Button type="button" variant="outline" className="w-full mt-4" onClick={handleGoogleLogin}>
               <Chrome className="h-4 w-4 mr-2" />
-              Entrar com Google
+              {t("auth.login.googleLogin")}
             </Button>
           </div>
 
           <div className="mt-6 text-center text-sm">
-            <span className="text-muted-foreground">Não tem uma conta? </span>
+            <span className="text-muted-foreground">{t("auth.login.noAccount")} </span>
             <Link href="/register" className="text-blue-600 hover:underline">
-              Registre-se
+              {t("auth.login.register")}
             </Link>
           </div>
 
           <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-            <p className="font-semibold mb-1">Credenciais de teste:</p>
-            <p>Admin: admin / admin</p>
-            <p>Usuário: user / user</p>
+            <p className="font-semibold mb-1">{t("auth.login.testCredentials")}</p>
+            <p>{t("auth.login.adminCredentials")}</p>
+            <p>{t("auth.login.userCredentials")}</p>
           </div>
         </CardContent>
       </Card>
