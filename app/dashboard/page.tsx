@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Search, Shield, AlertTriangle, CheckCircle, Globe, Mail, Building, User } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import DashboardLayout from "@/components/dashboard-layout"
 
 export default function UserDashboard() {
   const { user, isAuthenticated, loading } = useAuth()
@@ -106,7 +107,7 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <DashboardLayout>
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
@@ -253,6 +254,6 @@ export default function UserDashboard() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }

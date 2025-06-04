@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog"
 import { Globe, Plus, Play, Trash2, Eye } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import DashboardLayout from "@/components/dashboard-layout"
 
 interface Site {
   id: number
@@ -162,7 +163,7 @@ export default function AdminSites() {
   if (!user || user.role !== "admin") return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <DashboardLayout>
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -368,6 +369,6 @@ export default function AdminSites() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }

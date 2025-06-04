@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Bell, Search, Settings, LogOut, User, Shield, Menu, X } from "lucide-react"
+import { Bell, Search, Settings, LogOut } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function UserHeader() {
@@ -37,30 +37,18 @@ export default function UserHeader() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <Shield className="h-8 w-8 text-blue-600" />
-                <h1 className="text-xl font-bold text-gray-900">BreachHawk</h1>
-                {user.company && (
-                  <Badge variant="outline" className="text-xs">
-                    {user.company.name}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
+          {/* Page Title Area - será preenchido dinamicamente */}
+          <div className="flex-1">{/* Espaço para título da página */}</div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-4">
+          {/* Right side - Notifications and User Menu */}
+          <div className="flex items-center space-x-4">
             {/* Search */}
             <Button variant="ghost" size="sm" onClick={() => router.push("/search")}>
               <Search className="h-4 w-4 mr-2" />
-              Pesquisar
+              <span className="hidden sm:inline">Pesquisar</span>
             </Button>
 
             {/* Notifications */}
@@ -90,20 +78,10 @@ export default function UserHeader() {
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/dashboard")}>
-                  <User className="mr-2 h-4 w-4" />
-                  Dashboard
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push("/settings")}>
                   <Settings className="mr-2 h-4 w-4" />
                   Configurações
                 </DropdownMenuItem>
-                {user.role === "admin" && (
-                  <DropdownMenuItem onClick={() => router.push("/admin/dashboard")}>
-                    <Shield className="mr-2 h-4 w-4" />
-                    Painel Admin
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="text-red-600">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -112,54 +90,7 @@ export default function UserHeader() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-
-          {/* Mobile menu button */}
-          <div className="md:hidden">
-            <Button variant="ghost" size="sm" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
-          </div>
         </div>
-
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-200">
-              <div className="flex items-center gap-3 px-3 py-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.profileImage || "/placeholder.svg"} alt={getDisplayName()} />
-                  <AvatarFallback>{getInitials()}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">{getDisplayName()}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
-                </div>
-              </div>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => router.push("/search")}>
-                <Search className="mr-2 h-4 w-4" />
-                Pesquisar
-              </Button>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => router.push("/settings")}>
-                <Settings className="mr-2 h-4 w-4" />
-                Configurações
-              </Button>
-              {user.role === "admin" && (
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={() => router.push("/admin/dashboard")}
-                >
-                  <Shield className="mr-2 h-4 w-4" />
-                  Painel Admin
-                </Button>
-              )}
-              <Button variant="ghost" className="w-full justify-start text-red-600" onClick={logout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
     </header>
   )

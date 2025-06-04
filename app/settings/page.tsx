@@ -14,8 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User, Lock, Bell, Upload } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import UserHeader from "@/components/user-header"
-import UserFooter from "@/components/user-footer"
+import DashboardLayout from "@/components/dashboard-layout"
 
 export default function UserSettings() {
   const { user, isAuthenticated, loading } = useAuth()
@@ -156,9 +155,7 @@ export default function UserSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <UserHeader />
-
+    <DashboardLayout>
       <div className="max-w-4xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
@@ -366,8 +363,6 @@ export default function UserSettings() {
           </TabsContent>
         </Tabs>
       </div>
-
-      <UserFooter />
-    </div>
+    </DashboardLayout>
   )
 }
