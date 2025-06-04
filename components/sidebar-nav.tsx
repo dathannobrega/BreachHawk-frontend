@@ -3,12 +3,31 @@
 import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { LayoutDashboard, Search, Shield, Users, Settings, Building, Globe, LogOut, Menu, X } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import {
+  LayoutDashboard,
+  Search,
+  Shield,
+  Users,
+  Settings,
+  Building,
+  Globe,
+  LogOut,
+  Menu,
+  X,
+  FileText,
+  Bell,
+  BarChart3,
+  Lock,
+  CreditCard,
+} from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import { useState } from "react"
 
 export default function SidebarNav() {
   const { user, logout } = useAuth()
+  const { t } = useLanguage()
   const router = useRouter()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
@@ -16,35 +35,38 @@ export default function SidebarNav() {
   if (!user) return null
 
   const getNavItems = () => {
-    const baseItems = [
-      {
-        label: "Dashboard",
-        icon: LayoutDashboard,
-        href: "/dashboard",
-        roles: ["user", "admin", "platform_admin"],
-      },
-    ]
-
     if (user.role === "user") {
       return [
-        ...baseItems,
         {
-          label: "Pesquisar",
+          label: t.sidebar.dashboard,
+          icon: LayoutDashboard,
+          href: "/dashboard",
+          description: "Visão geral da sua conta",
+        },
+        {
+          label: t.sidebar.search,
           icon: Search,
           href: "/search",
-          roles: ["user"],
+          description: "Pesquisar vazamentos",
         },
         {
-          label: "Vazamentos",
+          label: t.sidebar.leaks,
           icon: Shield,
           href: "/leaks",
-          roles: ["user"],
+          description: "Vazamentos detectados",
+          badge: "3", // Exemplo de badge
         },
         {
-          label: "Configurações",
-          icon: Settings,
-          href: "/settings",
-          roles: ["user"],
+          label: t.sidebar.reports,
+          icon: FileText,
+          href: "/reports",
+          description: "Relatórios detalhados",
+        },
+        {
+          label: t.sidebar.alerts,
+          icon: Bell,
+          href: "/alerts",
+          description: "Configurar alertas",
         },
       ]
     }
@@ -52,28 +74,34 @@ export default function SidebarNav() {
     if (user.role === "admin") {
       return [
         {
-          label: "Dashboard",
+          label: t.sidebar.dashboard,
           icon: LayoutDashboard,
           href: "/admin/dashboard",
-          roles: ["admin"],
+          description: "Painel administrativo",
         },
         {
-          label: "Usuários",
+          label: t.sidebar.users,
           icon: Users,
           href: "/admin/users",
-          roles: ["admin"],
+          description: "Gerenciar usuários",
         },
         {
-          label: "Domínios",
+          label: t.sidebar.domains,
           icon: Globe,
           href: "/admin/domains",
-          roles: ["admin"],
+          description: "Domínios monitorados",
         },
         {
-          label: "Configurações",
-          icon: Settings,
-          href: "/admin/settings",
-          roles: ["admin"],
+          label: t.sidebar.analytics,
+          icon: BarChart3,
+          href: "/admin/analytics",
+          description: "Análises e métricas",
+        },
+        {
+          label: t.sidebar.security,
+          icon: Lock,
+          href: "/admin/security",
+          description: "Configurações de segurança",
         },
       ]
     }
@@ -81,97 +109,165 @@ export default function SidebarNav() {
     if (user.role === "platform_admin") {
       return [
         {
-          label: "Dashboard",
+          label: t.sidebar.dashboard,
           icon: LayoutDashboard,
           href: "/platform/dashboard",
-          roles: ["platform_admin"],
+          description: "Painel da plataforma",
         },
         {
-          label: "Empresas",
+          label: t.sidebar.companies,
           icon: Building,
           href: "/platform/companies",
-          roles: ["platform_admin"],
+          description: "Gerenciar empresas",
         },
         {
-          label: "Usuários",
+          label: t.sidebar.users,
           icon: Users,
           href: "/platform/users",
-          roles: ["platform_admin"],
+          description: "Todos os usuários",
         },
         {
-          label: "Financeiro",
-          icon: Settings,
+          label: t.sidebar.billing,
+          icon: CreditCard,
           href: "/platform/billing",
-          roles: ["platform_admin"],
+          description: "Faturamento e pagamentos",
+        },
+        {
+          label: t.sidebar.analytics,
+          icon: BarChart3,
+          href: "/platform/analytics",
+          description: "Analytics da plataforma",
         },
       ]
     }
 
-    return baseItems
+    return []
   }
 
   const navItems = getNavItems()
 
   const NavContent = () => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="p-6 border-b">
-        <div className="flex items-center gap-2">
-          <Shield className="h-8 w-8 text-blue-600" />
+      <div className="p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white/20 rounded-lg">
+            <Shield className="h-6 w-6 text-white" />
+          </div>
           <div>
-            <h2 className="text-xl font-bold">BreachHawk</h2>
-            {user.company && <p className="text-xs text-gray-500">{user.company.name}</p>}
+            <h2 className="text-xl font-bold text-white">BreachHawk</h2>
+            {user.company && <p className="text-xs text-blue-100 truncate max-w-[150px]">{user.company.name}</p>}
           </div>
         </div>
       </div>
 
       {/* User Info */}
-      <div className="p-4 border-b">
+      <div className="p-4 border-b bg-gray-50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-            <span className="text-blue-600 font-semibold">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-md">
+            <span className="text-white font-semibold text-lg">
               {(user.firstName?.[0] || user.username[0]).toUpperCase()}
             </span>
           </div>
-          <div className="flex-1">
-            <p className="font-medium">{user.firstName || user.username}</p>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-xs">
-                {user.role === "platform_admin" ? "Platform Admin" : user.role === "admin" ? "Admin" : "Usuário"}
-              </Badge>
-            </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-gray-900 truncate">{user.firstName || user.username}</p>
+            <p className="text-sm text-gray-500 truncate">{user.email}</p>
+            <Badge
+              variant={user.role === "platform_admin" ? "default" : user.role === "admin" ? "secondary" : "outline"}
+              className="text-xs mt-1"
+            >
+              {user.role === "platform_admin" ? "Platform Admin" : user.role === "admin" ? "Admin" : "Usuário"}
+            </Badge>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
-        <div className="space-y-2">
+      <nav className="flex-1 p-4 overflow-y-auto">
+        <div className="space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href
             return (
-              <Button
-                key={item.href}
-                variant={isActive ? "default" : "ghost"}
-                className="w-full justify-start"
-                onClick={() => {
-                  router.push(item.href)
-                  setIsOpen(false)
-                }}
-              >
-                <item.icon className="h-4 w-4 mr-3" />
-                {item.label}
-              </Button>
+              <div key={item.href} className="group">
+                <Button
+                  variant={isActive ? "default" : "ghost"}
+                  className={`w-full justify-start h-auto p-3 ${
+                    isActive ? "bg-blue-600 text-white shadow-md" : "hover:bg-gray-100 text-gray-700"
+                  }`}
+                  onClick={() => {
+                    router.push(item.href)
+                    setIsOpen(false)
+                  }}
+                >
+                  <div className="flex items-center gap-3 w-full">
+                    <item.icon className={`h-5 w-5 ${isActive ? "text-white" : "text-gray-500"}`} />
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{item.label}</span>
+                        {item.badge && (
+                          <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
+                            {item.badge}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className={`text-xs mt-0.5 ${isActive ? "text-blue-100" : "text-gray-500"}`}>
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+                </Button>
+              </div>
             )
           })}
+        </div>
+
+        <Separator className="my-4" />
+
+        {/* Settings */}
+        <div className="space-y-1">
+          <Button
+            variant={pathname === "/settings" || pathname === "/admin/settings" ? "default" : "ghost"}
+            className={`w-full justify-start h-auto p-3 ${
+              pathname === "/settings" || pathname === "/admin/settings"
+                ? "bg-blue-600 text-white shadow-md"
+                : "hover:bg-gray-100 text-gray-700"
+            }`}
+            onClick={() => {
+              const settingsPath = user.role === "admin" ? "/admin/settings" : "/settings"
+              router.push(settingsPath)
+              setIsOpen(false)
+            }}
+          >
+            <div className="flex items-center gap-3 w-full">
+              <Settings
+                className={`h-5 w-5 ${
+                  pathname === "/settings" || pathname === "/admin/settings" ? "text-white" : "text-gray-500"
+                }`}
+              />
+              <div className="flex-1 text-left">
+                <span className="font-medium">{t.sidebar.settings}</span>
+                <p
+                  className={`text-xs mt-0.5 ${
+                    pathname === "/settings" || pathname === "/admin/settings" ? "text-blue-100" : "text-gray-500"
+                  }`}
+                >
+                  Configurações da conta
+                </p>
+              </div>
+            </div>
+          </Button>
         </div>
       </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t">
-        <Button variant="ghost" className="w-full justify-start text-red-600" onClick={logout}>
+      <div className="p-4 border-t bg-gray-50">
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+          onClick={logout}
+        >
           <LogOut className="h-4 w-4 mr-3" />
-          Sair
+          {t.sidebar.logout}
         </Button>
       </div>
     </div>
@@ -183,14 +279,14 @@ export default function SidebarNav() {
       <Button
         variant="ghost"
         size="sm"
-        className="fixed top-4 left-4 z-50 md:hidden"
+        className="fixed top-4 left-4 z-50 md:hidden bg-white shadow-md"
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
 
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-white border-r">
+      <div className="hidden md:flex md:w-80 md:flex-col md:fixed md:inset-y-0 bg-white border-r shadow-sm">
         <NavContent />
       </div>
 
@@ -198,7 +294,7 @@ export default function SidebarNav() {
       {isOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsOpen(false)} />
-          <div className="fixed inset-y-0 left-0 w-64 bg-white">
+          <div className="fixed inset-y-0 left-0 w-80 bg-white shadow-xl">
             <NavContent />
           </div>
         </div>

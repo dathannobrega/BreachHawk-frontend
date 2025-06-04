@@ -9,6 +9,48 @@ import { useLanguage } from "@/contexts/language-context"
 export default function Pricing() {
   const { t } = useLanguage()
 
+  // Verificação de segurança para garantir que t e suas propriedades estão disponíveis
+  if (!t || !t.pricing) {
+    return (
+      <section id="pricing" className="py-24 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="animate-pulse bg-gray-300 h-6 w-24 mx-auto mb-4 rounded"></div>
+            <div className="animate-pulse bg-gray-300 h-10 w-64 mx-auto mb-4 rounded"></div>
+            <div className="animate-pulse bg-gray-300 h-6 w-96 mx-auto rounded"></div>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse bg-gray-300 h-96 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  // Verificação adicional para garantir que todas as propriedades necessárias existem
+  if (!t.pricing.openSource || !t.pricing.cloud || !t.pricing.enterprise) {
+    return (
+      <section id="pricing" className="py-24 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <Badge variant="secondary" className="mb-4">
+              {t.pricing.tag || "Pricing"}
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t.pricing.title || "Pricing"}</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">{t.pricing.subtitle || "Loading..."}</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse bg-gray-300 h-96 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   const plans = [
     {
       icon: Github,
@@ -16,7 +58,7 @@ export default function Pricing() {
       price: t.pricing.openSource.price,
       period: "",
       description: t.pricing.openSource.description,
-      features: t.pricing.openSource.features,
+      features: t.pricing.openSource.features || [],
       cta: t.pricing.openSource.cta,
       popular: false,
       gradient: "from-gray-600 to-gray-800",
@@ -27,7 +69,7 @@ export default function Pricing() {
       price: t.pricing.cloud.price,
       period: t.pricing.cloud.period,
       description: t.pricing.cloud.description,
-      features: t.pricing.cloud.features,
+      features: t.pricing.cloud.features || [],
       cta: t.pricing.cloud.cta,
       popular: true,
       gradient: "from-blue-600 to-purple-600",
@@ -38,7 +80,7 @@ export default function Pricing() {
       price: t.pricing.enterprise.price,
       period: "",
       description: t.pricing.enterprise.description,
-      features: t.pricing.enterprise.features,
+      features: t.pricing.enterprise.features || [],
       cta: t.pricing.enterprise.cta,
       popular: false,
       gradient: "from-green-600 to-teal-600",
@@ -64,7 +106,9 @@ export default function Pricing() {
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">Mais Popular</Badge>
+                  <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                    {t.pricing.popularBadge || "Popular"}
+                  </Badge>
                 </div>
               )}
 

@@ -9,6 +9,24 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { language, setLanguage, t } = useLanguage()
 
+  // Verificação de segurança para garantir que t está disponível
+  if (!t || !t.nav) {
+    return (
+      <header className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex-shrink-0">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                BreachHawk
+              </h1>
+            </div>
+            <div className="animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
+          </div>
+        </div>
+      </header>
+    )
+  }
+
   return (
     <header className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -60,7 +78,9 @@ export default function Header() {
             <Button variant="ghost" size="sm" onClick={() => (window.location.href = "/login")}>
               {t.nav.login}
             </Button>
-            <Button size="sm" onClick={() => (window.location.href = "/register")}>{t.nav.getStarted}</Button>
+            <Button size="sm" onClick={() => (window.location.href = "/register")}>
+              {t.nav.getStarted}
+            </Button>
           </div>
 
           {/* Mobile menu button */}

@@ -35,6 +35,38 @@ const Stat = ({ end, suffix }: { end: number; suffix: string }) => {
 export default function Hero() {
   const { t } = useLanguage()
 
+  // Verificação de segurança para garantir que t e suas propriedades estão disponíveis
+  if (!t || !t.hero) {
+    return (
+      <section className="relative pt-20 pb-16 overflow-hidden bg-gradient-to-br from-gray-50 via-white to-blue-50">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="text-center lg:text-left">
+              <div className="animate-pulse bg-gray-200 h-6 w-24 mb-6 rounded"></div>
+              <div className="animate-pulse bg-gray-200 h-12 w-3/4 mb-6 rounded"></div>
+              <div className="animate-pulse bg-gray-200 h-6 w-full mb-8 rounded"></div>
+              <div className="flex flex-col sm:flex-row gap-4 mb-12">
+                <div className="animate-pulse bg-gray-200 h-10 w-40 rounded"></div>
+                <div className="animate-pulse bg-gray-200 h-10 w-40 rounded"></div>
+              </div>
+              <div className="grid grid-cols-3 gap-8">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="text-center">
+                    <div className="animate-pulse bg-gray-200 h-8 w-16 mx-auto mb-1 rounded"></div>
+                    <div className="animate-pulse bg-gray-200 h-4 w-24 mx-auto rounded"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="relative">
+              <div className="animate-pulse bg-gray-200 h-80 w-full rounded-2xl"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="relative pt-20 pb-16 overflow-hidden bg-gradient-to-br from-gray-50 via-white to-blue-50">
       {/* Background decoration */}
@@ -80,15 +112,15 @@ export default function Hero() {
             <div className="grid grid-cols-3 gap-8">
               <div className="text-center">
                 <Stat end={98} suffix="%" />
-                <p className="text-sm text-gray-600 mt-1">{t.hero.stats.detection}</p>
+                <p className="text-sm text-gray-600 mt-1">{t.hero.stats?.detection || "Detection Rate"}</p>
               </div>
               <div className="text-center">
                 <Stat end={24} suffix="/7" />
-                <p className="text-sm text-gray-600 mt-1">{t.hero.stats.monitoring}</p>
+                <p className="text-sm text-gray-600 mt-1">{t.hero.stats?.monitoring || "Monitoring"}</p>
               </div>
               <div className="text-center">
                 <Stat end={1500} suffix="+" />
-                <p className="text-sm text-gray-600 mt-1">{t.hero.stats.users}</p>
+                <p className="text-sm text-gray-600 mt-1">{t.hero.stats?.users || "Active Users"}</p>
               </div>
             </div>
           </div>

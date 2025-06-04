@@ -29,6 +29,38 @@ export default function LoginPage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
+  const [isLanguageContextReady, setIsLanguageContextReady] = useState(false)
+
+  useEffect(() => {
+    if (t && t.auth && t.auth.login) {
+      setIsLanguageContextReady(true)
+    }
+  }, [t])
+
+  if (!isLanguageContextReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   // Verificar se há token na URL (OAuth callback)
   useEffect(() => {
     const token = searchParams.get("token")
@@ -47,14 +79,14 @@ export default function LoginPage() {
           setError(language === "pt" ? "Erro ao fazer login com Google" : "Error signing in with Google")
         })
     }
-  }, [searchParams])
+  }, [searchParams, loginWithToken, apiUrl, language])
 
   // Redirecionar se já estiver autenticado
   useEffect(() => {
     if (isAuthenticated) {
       router.push("/dashboard")
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, router])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target

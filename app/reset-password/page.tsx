@@ -33,9 +33,34 @@ export default function ResetPasswordPage() {
     if (tokenParam) {
       setToken(tokenParam)
     } else {
-      setErrors({ token: t.auth.resetPassword.errors.invalidToken })
+      setErrors({ token: t?.auth?.resetPassword?.errors?.invalidToken || "Invalid Token" })
     }
-  }, [searchParams])
+  }, [searchParams, t])
+
+  // Verificação de segurança para garantir que t está disponível
+  if (!t || !t.auth || !t.auth.resetPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target

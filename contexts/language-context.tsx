@@ -1,26 +1,73 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
-import { type Language, translations } from "@/lib/i18n"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { translations } from "@/lib/i18n"
+
+export type Language = "pt" | "en"
 
 interface LanguageContextType {
   language: Language
   setLanguage: (lang: Language) => void
   t: typeof translations.pt
+  toggleLanguage: () => void
 }
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
+// Valor padrão para o contexto
+const defaultContext: LanguageContextType = {
+  language: "pt",
+  setLanguage: () => {},
+  t: translations.pt,
+  toggleLanguage: () => {},
+}
+
+const LanguageContext = createContext<LanguageContextType>(defaultContext)
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>("pt")
+  // Inicializa com o idioma padrão (português)
+  const [language, setLanguageState] = useState<Language>("pt")
+  const [isClient, setIsClient] = useState(false)
 
-  const value = {
-    language,
-    setLanguage,
-    t: translations[language],
+  // Efeito para carregar a preferência de idioma do usuário
+  useEffect(() => {
+    setIsClient(true)
+    try {
+      const savedLanguage = localStorage.getItem("language") as Language
+      if (savedLanguage && (savedLanguage === "pt" || savedLanguage === "en")) {
+        setLanguageState(savedLanguage)
+      } else {
+        // Detecta o idioma do navegador como fallback
+        const browserLanguage = navigator.language.startsWith("pt") ? "pt" : "en"
+        setLanguageState(browserLanguage)
+      }
+    } catch (error) {
+      console.error("Error accessing localStorage:", error)
+    }
+  }, [])
+
+  // Função para alterar o idioma
+  const setLanguage = (newLanguage: Language) => {
+    setLanguageState(newLanguage)
+    if (isClient) {
+      try {
+        localStorage.setItem("language", newLanguage)
+      } catch (error) {
+        console.error("Error writing to localStorage:", error)
+      }
+    }
   }
 
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>
+  // Função para alternar entre os idiomas
+  const toggleLanguage = () => {
+    const newLanguage = language === "pt" ? "en" : "pt"
+    setLanguage(newLanguage)
+  }
+
+  // Obtém as traduções para o idioma atual
+  const t = translations[language] || translations.pt
+
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t, toggleLanguage }}>{children}</LanguageContext.Provider>
+  )
 }
 
 export function useLanguage() {

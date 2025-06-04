@@ -12,12 +12,15 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { User, Lock, Bell, Upload } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { User, Lock, Bell, Upload, Shield, History } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import DashboardLayout from "@/components/dashboard-layout"
 
 export default function UserSettings() {
   const { user, isAuthenticated, loading } = useAuth()
+  const { t, language, setLanguage } = useLanguage()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("profile")
   const [saving, setSaving] = useState(false)
@@ -29,6 +32,7 @@ export default function UserSettings() {
     profileImage: user?.profileImage || "",
     organization: "",
     contact: "",
+    preferredLanguage: language,
   })
 
   // Password settings
@@ -46,6 +50,12 @@ export default function UserSettings() {
     weeklyReport: true,
   })
 
+  // Security settings
+  const [securitySettings, setSecuritySettings] = useState({
+    twoFactorEnabled: false,
+    loginNotifications: true,
+  })
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push("/login")
@@ -59,13 +69,14 @@ export default function UserSettings() {
         profileImage: user.profileImage || "",
         organization: user.organization || "",
         contact: user.contact || "",
+        preferredLanguage: language,
       })
       setNotificationSettings((prev) => ({
         ...prev,
         isSubscribed: user.isSubscribed ?? true,
       }))
     }
-  }, [user])
+  }, [user, language])
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Carregando...</div>
@@ -90,17 +101,23 @@ export default function UserSettings() {
           organization: profileSettings.organization,
           contact: profileSettings.contact,
           is_subscribed: notificationSettings.isSubscribed,
+          preferred_language: profileSettings.preferredLanguage,
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Erro ao atualizar perfil")
+        throw new Error(t.settings.profile.profileError)
       }
 
-      setMessage("Perfil atualizado com sucesso!")
+      // Update language if changed
+      if (profileSettings.preferredLanguage !== language) {
+        setLanguage(profileSettings.preferredLanguage as "pt" | "en")
+      }
+
+      setMessage(t.settings.profile.profileUpdated)
       setTimeout(() => setMessage(""), 3000)
     } catch (error) {
-      setMessage("Erro ao atualizar perfil")
+      setMessage(t.settings.profile.profileError)
     } finally {
       setSaving(false)
     }
@@ -110,7 +127,7 @@ export default function UserSettings() {
     e.preventDefault()
 
     if (passwordSettings.newPassword !== passwordSettings.confirmPassword) {
-      setMessage("As senhas não conferem")
+      setMessage(t.settings.password.passwordsNotMatch)
       return
     }
 
@@ -130,10 +147,10 @@ export default function UserSettings() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.detail || "Erro ao alterar senha")
+        throw new Error(error.detail || t.settings.password.passwordError)
       }
 
-      setMessage("Senha alterada com sucesso!")
+      setMessage(t.settings.password.passwordChanged)
       setPasswordSettings({
         oldPassword: "",
         newPassword: "",
@@ -141,7 +158,7 @@ export default function UserSettings() {
       })
       setTimeout(() => setMessage(""), 3000)
     } catch (error: any) {
-      setMessage(error.message || "Erro ao alterar senha")
+      setMessage(error.message || t.settings.password.passwordError)
     } finally {
       setSaving(false)
     }
@@ -159,8 +176,8 @@ export default function UserSettings() {
       <div className="max-w-4xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Configurações</h1>
-          <p className="text-gray-600 mt-2">Gerencie suas informações pessoais e preferências</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t.settings.title}</h1>
+          <p className="text-gray-600 mt-2">{t.settings.subtitle}</p>
         </div>
 
         {message && (
@@ -170,10 +187,10 @@ export default function UserSettings() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Perfil
+              {t.sidebar.profile}
             </TabsTrigger>
             <TabsTrigger value="password" className="flex items-center gap-2">
               <Lock className="h-4 w-4" />
@@ -181,7 +198,11 @@ export default function UserSettings() {
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Bell className="h-4 w-4" />
-              Notificações
+              {t.sidebar.notifications}
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              {t.sidebar.security}
             </TabsTrigger>
           </TabsList>
 
@@ -189,8 +210,8 @@ export default function UserSettings() {
           <TabsContent value="profile">
             <Card>
               <CardHeader>
-                <CardTitle>Informações do Perfil</CardTitle>
-                <CardDescription>Atualize suas informações pessoais</CardDescription>
+                <CardTitle>{t.settings.profile.title}</CardTitle>
+                <CardDescription>{t.settings.profile.subtitle}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleProfileSubmit} className="space-y-6">
@@ -203,38 +224,55 @@ export default function UserSettings() {
                     <div>
                       <Button type="button" variant="outline" size="sm">
                         <Upload className="h-4 w-4 mr-2" />
-                        Alterar Foto
+                        {t.settings.profile.changePhoto}
                       </Button>
-                      <p className="text-sm text-gray-500 mt-1">JPG, PNG até 2MB</p>
+                      <p className="text-sm text-gray-500 mt-1">{t.settings.profile.photoFormat}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="email">E-mail</Label>
+                      <Label htmlFor="email">{t.settings.profile.email}</Label>
                       <Input id="email" type="email" value={profileSettings.email} disabled className="bg-gray-50" />
-                      <p className="text-sm text-gray-500">O e-mail não pode ser alterado</p>
+                      <p className="text-sm text-gray-500">{t.settings.profile.emailDisabled}</p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="organization">Organização</Label>
+                      <Label htmlFor="organization">{t.settings.profile.organization}</Label>
                       <Input
                         id="organization"
                         value={profileSettings.organization}
                         onChange={(e) => setProfileSettings({ ...profileSettings, organization: e.target.value })}
-                        placeholder="Nome da sua organização"
+                        placeholder={t.settings.profile.organizationPlaceholder}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="contact">Contato</Label>
+                    <Label htmlFor="contact">{t.settings.profile.contact}</Label>
                     <Input
                       id="contact"
                       value={profileSettings.contact}
                       onChange={(e) => setProfileSettings({ ...profileSettings, contact: e.target.value })}
-                      placeholder="Telefone ou outro meio de contato"
+                      placeholder={t.settings.profile.contactPlaceholder}
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="language">{t.settings.profile.language}</Label>
+                    <Select
+                      value={profileSettings.preferredLanguage}
+                      onValueChange={(value) => setProfileSettings({ ...profileSettings, preferredLanguage: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pt">Português</SelectItem>
+                        <SelectItem value="en">English</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-gray-500">{t.settings.profile.languageSubtitle}</p>
                   </div>
 
                   <div className="flex items-center space-x-2">
@@ -245,11 +283,11 @@ export default function UserSettings() {
                         setNotificationSettings({ ...notificationSettings, isSubscribed: checked })
                       }
                     />
-                    <Label htmlFor="subscribed">Receber comunicações da plataforma</Label>
+                    <Label htmlFor="subscribed">{t.settings.profile.subscribed}</Label>
                   </div>
 
                   <Button type="submit" disabled={saving}>
-                    {saving ? "Salvando..." : "Salvar Alterações"}
+                    {saving ? t.settings.profile.saving : t.settings.profile.saveChanges}
                   </Button>
                 </form>
               </CardContent>
@@ -260,13 +298,13 @@ export default function UserSettings() {
           <TabsContent value="password">
             <Card>
               <CardHeader>
-                <CardTitle>Alterar Senha</CardTitle>
-                <CardDescription>Mantenha sua conta segura com uma senha forte</CardDescription>
+                <CardTitle>{t.settings.password.title}</CardTitle>
+                <CardDescription>{t.settings.password.subtitle}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handlePasswordSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="oldPassword">Senha Atual</Label>
+                    <Label htmlFor="oldPassword">{t.settings.password.currentPassword}</Label>
                     <Input
                       id="oldPassword"
                       type="password"
@@ -277,7 +315,7 @@ export default function UserSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="newPassword">Nova Senha</Label>
+                    <Label htmlFor="newPassword">{t.settings.password.newPassword}</Label>
                     <Input
                       id="newPassword"
                       type="password"
@@ -288,7 +326,7 @@ export default function UserSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                    <Label htmlFor="confirmPassword">{t.settings.password.confirmPassword}</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
@@ -299,7 +337,7 @@ export default function UserSettings() {
                   </div>
 
                   <Button type="submit" disabled={saving}>
-                    {saving ? "Alterando..." : "Alterar Senha"}
+                    {saving ? t.settings.password.changing : t.settings.password.changePassword}
                   </Button>
                 </form>
               </CardContent>
@@ -310,15 +348,15 @@ export default function UserSettings() {
           <TabsContent value="notifications">
             <Card>
               <CardHeader>
-                <CardTitle>Preferências de Notificação</CardTitle>
-                <CardDescription>Configure como você deseja receber notificações</CardDescription>
+                <CardTitle>{t.settings.notifications.title}</CardTitle>
+                <CardDescription>{t.settings.notifications.subtitle}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Alertas por E-mail</Label>
-                      <p className="text-sm text-gray-500">Receba alertas quando novos vazamentos forem detectados</p>
+                      <Label>{t.settings.notifications.emailAlerts}</Label>
+                      <p className="text-sm text-gray-500">{t.settings.notifications.emailAlertsDesc}</p>
                     </div>
                     <Switch
                       checked={notificationSettings.emailAlerts}
@@ -330,8 +368,8 @@ export default function UserSettings() {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Alertas por SMS</Label>
-                      <p className="text-sm text-gray-500">Receba alertas por SMS para vazamentos críticos</p>
+                      <Label>{t.settings.notifications.smsAlerts}</Label>
+                      <p className="text-sm text-gray-500">{t.settings.notifications.smsAlertsDesc}</p>
                     </div>
                     <Switch
                       checked={notificationSettings.smsAlerts}
@@ -343,8 +381,8 @@ export default function UserSettings() {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Relatório Semanal</Label>
-                      <p className="text-sm text-gray-500">Receba um resumo semanal das atividades</p>
+                      <Label>{t.settings.notifications.weeklyReport}</Label>
+                      <p className="text-sm text-gray-500">{t.settings.notifications.weeklyReportDesc}</p>
                     </div>
                     <Switch
                       checked={notificationSettings.weeklyReport}
@@ -355,8 +393,61 @@ export default function UserSettings() {
                   </div>
 
                   <Button onClick={handleProfileSubmit} disabled={saving}>
-                    {saving ? "Salvando..." : "Salvar Preferências"}
+                    {saving ? t.settings.profile.saving : t.settings.notifications.savePreferences}
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Security Settings */}
+          <TabsContent value="security">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t.settings.security.title}</CardTitle>
+                <CardDescription>{t.settings.security.subtitle}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>{t.settings.security.twoFactor}</Label>
+                      <p className="text-sm text-gray-500">{t.settings.security.twoFactorDesc}</p>
+                    </div>
+                    <Switch
+                      checked={securitySettings.twoFactorEnabled}
+                      onCheckedChange={(checked) =>
+                        setSecuritySettings({ ...securitySettings, twoFactorEnabled: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-base">{t.settings.security.sessions}</Label>
+                      <p className="text-sm text-gray-500 mb-3">{t.settings.security.sessionsDesc}</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <p className="font-medium">Sessão Atual</p>
+                            <p className="text-sm text-gray-500">Chrome • São Paulo, Brasil</p>
+                          </div>
+                          <Button variant="outline" size="sm">
+                            Ativa
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-base">{t.settings.security.loginHistory}</Label>
+                      <p className="text-sm text-gray-500 mb-3">{t.settings.security.loginHistoryDesc}</p>
+                      <Button variant="outline" className="w-full">
+                        <History className="h-4 w-4 mr-2" />
+                        Ver Histórico Completo
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

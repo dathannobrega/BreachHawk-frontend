@@ -16,10 +16,12 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Building, Users, Palette, Globe, Upload, Trash2, UserPlus } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
 import DashboardLayout from "@/components/dashboard-layout"
 
 export default function AdminSettings() {
   const { user, isAuthenticated, loading } = useAuth()
+  const { t } = useLanguage()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("company")
   const [saving, setSaving] = useState(false)
@@ -92,7 +94,7 @@ export default function AdminSettings() {
     try {
       // Simular API call
       await new Promise((resolve) => setTimeout(resolve, 1000))
-      setMessage("Configurações da empresa salvas com sucesso!")
+      setMessage(t.admin.settings.company.settingsSaved)
       setTimeout(() => setMessage(""), 3000)
     } catch (error) {
       setMessage("Erro ao salvar configurações")
@@ -107,7 +109,7 @@ export default function AdminSettings() {
     try {
       // Simular API call
       await new Promise((resolve) => setTimeout(resolve, 1000))
-      setMessage("Configurações de marca salvas com sucesso!")
+      setMessage(t.admin.settings.branding.brandingSaved)
       setTimeout(() => setMessage(""), 3000)
     } catch (error) {
       setMessage("Erro ao salvar configurações")
@@ -127,7 +129,7 @@ export default function AdminSettings() {
           : user,
       ),
     )
-    setMessage(`Usuário ${action === "activate" ? "ativado" : "desativado"} com sucesso!`)
+    setMessage(action === "activate" ? t.admin.settings.users.userActivated : t.admin.settings.users.userDeactivated)
     setTimeout(() => setMessage(""), 3000)
   }
 
@@ -136,8 +138,8 @@ export default function AdminSettings() {
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Configurações Administrativas</h1>
-          <p className="text-gray-600 mt-2">Gerencie as configurações da sua empresa e usuários</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t.admin.settings.title}</h1>
+          <p className="text-gray-600 mt-2">{t.admin.settings.subtitle}</p>
         </div>
 
         {message && (
@@ -158,7 +160,7 @@ export default function AdminSettings() {
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Usuários
+              {t.admin.settings.users.title}
             </TabsTrigger>
             <TabsTrigger value="domains" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
@@ -170,77 +172,77 @@ export default function AdminSettings() {
           <TabsContent value="company">
             <Card>
               <CardHeader>
-                <CardTitle>Informações da Empresa</CardTitle>
-                <CardDescription>Configure as informações básicas da sua empresa</CardDescription>
+                <CardTitle>{t.admin.settings.company.title}</CardTitle>
+                <CardDescription>{t.admin.settings.company.subtitle}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleCompanySubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="companyName">Nome da Empresa</Label>
+                      <Label htmlFor="companyName">{t.admin.settings.company.name}</Label>
                       <Input
                         id="companyName"
                         value={companySettings.name}
                         onChange={(e) => setCompanySettings({ ...companySettings, name: e.target.value })}
-                        placeholder="Digite o nome da empresa"
+                        placeholder={t.admin.settings.company.namePlaceholder}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="companyDomain">Domínio Principal</Label>
+                      <Label htmlFor="companyDomain">{t.admin.settings.company.domain}</Label>
                       <Input
                         id="companyDomain"
                         value={companySettings.domain}
                         onChange={(e) => setCompanySettings({ ...companySettings, domain: e.target.value })}
-                        placeholder="exemplo.com"
+                        placeholder={t.admin.settings.company.domainPlaceholder}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="companyWebsite">Website</Label>
+                      <Label htmlFor="companyWebsite">{t.admin.settings.company.website}</Label>
                       <Input
                         id="companyWebsite"
                         value={companySettings.website}
                         onChange={(e) => setCompanySettings({ ...companySettings, website: e.target.value })}
-                        placeholder="https://www.exemplo.com"
+                        placeholder={t.admin.settings.company.websitePlaceholder}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="companyPhone">Telefone</Label>
+                      <Label htmlFor="companyPhone">{t.admin.settings.company.phone}</Label>
                       <Input
                         id="companyPhone"
                         value={companySettings.phone}
                         onChange={(e) => setCompanySettings({ ...companySettings, phone: e.target.value })}
-                        placeholder="(11) 99999-9999"
+                        placeholder={t.admin.settings.company.phonePlaceholder}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="companyDescription">Descrição</Label>
+                    <Label htmlFor="companyDescription">{t.admin.settings.company.description}</Label>
                     <Textarea
                       id="companyDescription"
                       value={companySettings.description}
                       onChange={(e) => setCompanySettings({ ...companySettings, description: e.target.value })}
-                      placeholder="Descreva sua empresa..."
+                      placeholder={t.admin.settings.company.descriptionPlaceholder}
                       rows={3}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="companyAddress">Endereço</Label>
+                    <Label htmlFor="companyAddress">{t.admin.settings.company.address}</Label>
                     <Textarea
                       id="companyAddress"
                       value={companySettings.address}
                       onChange={(e) => setCompanySettings({ ...companySettings, address: e.target.value })}
-                      placeholder="Endereço completo da empresa"
+                      placeholder={t.admin.settings.company.addressPlaceholder}
                       rows={2}
                     />
                   </div>
 
                   <Button type="submit" disabled={saving}>
-                    {saving ? "Salvando..." : "Salvar Configurações"}
+                    {saving ? "Salvando..." : t.admin.settings.company.saveSettings}
                   </Button>
                 </form>
               </CardContent>
@@ -251,14 +253,14 @@ export default function AdminSettings() {
           <TabsContent value="branding">
             <Card>
               <CardHeader>
-                <CardTitle>Personalização da Marca</CardTitle>
-                <CardDescription>Customize a aparência da plataforma para sua empresa</CardDescription>
+                <CardTitle>{t.admin.settings.branding.title}</CardTitle>
+                <CardDescription>{t.admin.settings.branding.subtitle}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleBrandingSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="primaryColor">Cor Primária</Label>
+                      <Label htmlFor="primaryColor">{t.admin.settings.branding.primaryColor}</Label>
                       <div className="flex items-center gap-2">
                         <Input
                           id="primaryColor"
@@ -276,7 +278,7 @@ export default function AdminSettings() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="secondaryColor">Cor Secundária</Label>
+                      <Label htmlFor="secondaryColor">{t.admin.settings.branding.secondaryColor}</Label>
                       <div className="flex items-center gap-2">
                         <Input
                           id="secondaryColor"
@@ -295,28 +297,28 @@ export default function AdminSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="logoUrl">URL do Logo</Label>
+                    <Label htmlFor="logoUrl">{t.admin.settings.branding.logoUrl}</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         id="logoUrl"
                         value={brandingSettings.logoUrl}
                         onChange={(e) => setBrandingSettings({ ...brandingSettings, logoUrl: e.target.value })}
-                        placeholder="https://exemplo.com/logo.png"
+                        placeholder={t.admin.settings.branding.logoPlaceholder}
                       />
                       <Button type="button" variant="outline">
                         <Upload className="h-4 w-4 mr-2" />
-                        Upload
+                        {t.admin.settings.branding.upload}
                       </Button>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="customCss">CSS Personalizado</Label>
+                    <Label htmlFor="customCss">{t.admin.settings.branding.customCss}</Label>
                     <Textarea
                       id="customCss"
                       value={brandingSettings.customCss}
                       onChange={(e) => setBrandingSettings({ ...brandingSettings, customCss: e.target.value })}
-                      placeholder="/* Adicione seu CSS personalizado aqui */"
+                      placeholder={t.admin.settings.branding.customCssPlaceholder}
                       rows={6}
                       className="font-mono"
                     />
@@ -328,11 +330,11 @@ export default function AdminSettings() {
                       checked={brandingSettings.showBranding}
                       onCheckedChange={(checked) => setBrandingSettings({ ...brandingSettings, showBranding: checked })}
                     />
-                    <Label htmlFor="showBranding">Mostrar marca da empresa na interface</Label>
+                    <Label htmlFor="showBranding">{t.admin.settings.branding.showBranding}</Label>
                   </div>
 
                   <Button type="submit" disabled={saving}>
-                    {saving ? "Salvando..." : "Salvar Personalização"}
+                    {saving ? "Salvando..." : t.admin.settings.branding.saveBranding}
                   </Button>
                 </form>
               </CardContent>
@@ -345,12 +347,12 @@ export default function AdminSettings() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Gerenciamento de Usuários</CardTitle>
-                    <CardDescription>Gerencie os usuários da sua empresa</CardDescription>
+                    <CardTitle>{t.admin.settings.users.title}</CardTitle>
+                    <CardDescription>{t.admin.settings.users.subtitle}</CardDescription>
                   </div>
                   <Button>
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Adicionar Usuário
+                    {t.admin.settings.users.addUser}
                   </Button>
                 </div>
               </CardHeader>
@@ -358,12 +360,12 @@ export default function AdminSettings() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>E-mail</TableHead>
-                      <TableHead>Função</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Último Login</TableHead>
-                      <TableHead>Ações</TableHead>
+                      <TableHead>{t.admin.settings.users.name}</TableHead>
+                      <TableHead>{t.admin.settings.users.email}</TableHead>
+                      <TableHead>{t.admin.settings.users.role}</TableHead>
+                      <TableHead>{t.admin.settings.users.status}</TableHead>
+                      <TableHead>{t.admin.settings.users.lastLogin}</TableHead>
+                      <TableHead>{t.admin.settings.users.actions}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -373,12 +375,12 @@ export default function AdminSettings() {
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
                           <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                            {user.role === "admin" ? "Admin" : "Usuário"}
+                            {user.role === "admin" ? t.admin.settings.users.admin : t.admin.settings.users.user}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant={user.status === "active" ? "default" : "secondary"}>
-                            {user.status === "active" ? "Ativo" : "Inativo"}
+                            {user.status === "active" ? t.admin.settings.users.active : t.admin.settings.users.inactive}
                           </Badge>
                         </TableCell>
                         <TableCell>{user.lastLogin}</TableCell>
@@ -391,10 +393,12 @@ export default function AdminSettings() {
                                 handleUserAction(user.id, user.status === "active" ? "deactivate" : "activate")
                               }
                             >
-                              {user.status === "active" ? "Desativar" : "Ativar"}
+                              {user.status === "active"
+                                ? t.admin.settings.users.deactivate
+                                : t.admin.settings.users.activate}
                             </Button>
                             <Button size="sm" variant="outline">
-                              Editar
+                              {t.admin.settings.users.edit}
                             </Button>
                             <Button size="sm" variant="destructive">
                               <Trash2 className="h-4 w-4" />
@@ -413,29 +417,29 @@ export default function AdminSettings() {
           <TabsContent value="domains">
             <Card>
               <CardHeader>
-                <CardTitle>Gerenciamento de Domínios</CardTitle>
-                <CardDescription>Configure os domínios monitorados pela sua empresa</CardDescription>
+                <CardTitle>{t.admin.settings.domains.title}</CardTitle>
+                <CardDescription>{t.admin.settings.domains.subtitle}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <Input placeholder="Adicionar novo domínio (ex: exemplo.com)" className="flex-1" />
-                    <Button>Adicionar</Button>
+                    <Input placeholder={t.admin.settings.domains.addDomainPlaceholder} className="flex-1" />
+                    <Button>{t.admin.settings.domains.addDomain}</Button>
                   </div>
 
                   <div className="space-y-2">
-                    <h4 className="font-medium">Domínios Monitorados</h4>
+                    <h4 className="font-medium">{t.admin.settings.domains.monitoredDomains}</h4>
                     <div className="space-y-2">
                       {["exemplo.com", "test.org", "demo.net"].map((domain, index) => (
                         <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center gap-3">
                             <Globe className="h-4 w-4 text-gray-500" />
                             <span className="font-medium">{domain}</span>
-                            <Badge variant="default">Ativo</Badge>
+                            <Badge variant="default">{t.admin.settings.users.active}</Badge>
                           </div>
                           <div className="flex items-center gap-2">
                             <Button size="sm" variant="outline">
-                              Configurar
+                              {t.admin.settings.domains.configure}
                             </Button>
                             <Button size="sm" variant="destructive">
                               <Trash2 className="h-4 w-4" />
