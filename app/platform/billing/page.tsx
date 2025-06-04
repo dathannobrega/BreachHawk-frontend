@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   DollarSign,
   CreditCard,
@@ -22,367 +23,208 @@ import {
   Clock,
   XCircle,
   Edit,
+  RefreshCw,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import DashboardLayout from "@/components/dashboard-layout"
-
-interface Invoice {
-  id: number
-  companyId: number
-  companyName: string
-  amount: number
-  status: "paid" | "pending" | "overdue" | "cancelled"
-  dueDate: string
-  paidDate?: string
-  plan: string
-  period: string
-  items: {
-    description: string
-    quantity: number
-    unitPrice: number
-    total: number
-  }[]
-}
-
-interface Payment {
-  id: number
-  companyId: number
-  companyName: string
-  amount: number
-  method: "credit_card" | "bank_transfer" | "pix"
-  status: "completed" | "processing" | "failed"
-  date: string
-  invoiceId: number
-}
-
-interface Subscription {
-  id: number
-  companyId: number
-  companyName: string
-  plan: "trial" | "basic" | "professional" | "enterprise"
-  status: "active" | "cancelled" | "expired"
-  startDate: string
-  endDate: string
-  monthlyAmount: number
-  nextBilling: string
-}
+import { useBilling } from "@/hooks/use-billing"
+import { billingService } from "@/services/billing-service"
 
 export default function PlatformBilling() {
-  const { user, isAuthenticated, loading } = useAuth()
+  const { user, isAuthenticated, loading: authLoading } = useAuth()
   const router = useRouter()
+  const { invoices, payments, subscriptions, stats, loading, error, refetch } = useBilling()
   const [activeTab, setActiveTab] = useState("overview")
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [periodFilter, setPeriodFilter] = useState("month")
-
-  // Mock data
-  const [invoices] = useState<Invoice[]>([
-    {
-      id: 1,
-      companyId: 1,
-      companyName: "TechCorp Solutions",
-      amount: 2500,
-      status: "paid",
-      dueDate: "2023-05-15",
-      paidDate: "2023-05-14",
-      plan: "Enterprise",
-      period: "2023-05",
-      items: [{ description: "Plano Enterprise - Maio 2023", quantity: 1, unitPrice: 2500, total: 2500 }],
-    },
-    {
-      id: 2,
-      companyId: 2,
-      companyName: "SecureBank Ltd",
-      amount: 1800,
-      status: "paid",
-      dueDate: "2023-05-20",
-      paidDate: "2023-05-19",
-      plan: "Professional",
-      period: "2023-05",
-      items: [{ description: "Plano Professional - Maio 2023", quantity: 1, unitPrice: 1800, total: 1800 }],
-    },
-    {
-      id: 3,
-      companyId: 3,
-      companyName: "DataSafe Inc",
-      amount: 1800,
-      status: "pending",
-      dueDate: "2023-05-25",
-      plan: "Professional",
-      period: "2023-05",
-      items: [{ description: "Plano Professional - Maio 2023", quantity: 1, unitPrice: 1800, total: 1800 }],
-    },
-    {
-      id: 4,
-      companyId: 5,
-      companyName: "OldCorp",
-      amount: 999,
-      status: "overdue",
-      dueDate: "2023-04-15",
-      plan: "Basic",
-      period: "2023-04",
-      items: [{ description: "Plano Basic - Abril 2023", quantity: 1, unitPrice: 999, total: 999 }],
-    },
-  ])
-
-  const [payments] = useState<Payment[]>([
-    {
-      id: 1,
-      companyId: 1,
-      companyName: "TechCorp Solutions",
-      amount: 2500,
-      method: "credit_card",
-      status: "completed",
-      date: "2023-05-14T10:30:00Z",
-      invoiceId: 1,
-    },
-    {
-      id: 2,
-      companyId: 2,
-      companyName: "SecureBank Ltd",
-      amount: 1800,
-      method: "bank_transfer",
-      status: "completed",
-      date: "2023-05-19T14:20:00Z",
-      invoiceId: 2,
-    },
-    {
-      id: 3,
-      companyId: 4,
-      companyName: "StartupCo",
-      amount: 299,
-      method: "pix",
-      status: "processing",
-      date: "2023-05-20T09:15:00Z",
-      invoiceId: 5,
-    },
-  ])
-
-  const [subscriptions] = useState<Subscription[]>([
-    {
-      id: 1,
-      companyId: 1,
-      companyName: "TechCorp Solutions",
-      plan: "enterprise",
-      status: "active",
-      startDate: "2023-01-15",
-      endDate: "2024-01-15",
-      monthlyAmount: 2500,
-      nextBilling: "2023-06-15",
-    },
-    {
-      id: 2,
-      companyId: 2,
-      companyName: "SecureBank Ltd",
-      plan: "professional",
-      status: "active",
-      startDate: "2023-02-20",
-      endDate: "2024-02-20",
-      monthlyAmount: 1800,
-      nextBilling: "2023-06-20",
-    },
-    {
-      id: 3,
-      companyId: 3,
-      companyName: "DataSafe Inc",
-      plan: "professional",
-      status: "active",
-      startDate: "2023-03-10",
-      endDate: "2024-03-10",
-      monthlyAmount: 1800,
-      nextBilling: "2023-06-10",
-    },
-    {
-      id: 4,
-      companyId: 4,
-      companyName: "StartupCo",
-      plan: "trial",
-      status: "active",
-      startDate: "2023-05-01",
-      endDate: "2023-06-01",
-      monthlyAmount: 0,
-      nextBilling: "2023-06-01",
-    },
-  ])
 
   useEffect(() => {
-    if (!loading && (!isAuthenticated || user?.role !== "platform_admin")) {
+    if (!authLoading && (!isAuthenticated || user?.role !== "platform_admin")) {
       router.push("/login")
     }
-  }, [isAuthenticated, loading, user])
+  }, [isAuthenticated, authLoading, user])
 
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>
+  if (authLoading || loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            Carregando dados de faturamento...
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   if (!user || user.role !== "platform_admin") return null
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value)
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto p-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Erro ao carregar dados: {error}
+              <Button onClick={refetch} variant="outline" size="sm" className="ml-2">
+                Tentar novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "paid":
-      case "completed":
+      case "succeeded":
       case "active":
         return <CheckCircle className="h-4 w-4 text-green-500" />
-      case "pending":
+      case "open":
       case "processing":
+      case "trialing":
         return <Clock className="h-4 w-4 text-yellow-500" />
-      case "overdue":
-      case "failed":
+      case "void":
+      case "canceled":
+      case "uncollectible":
+        return <XCircle className="h-4 w-4 text-red-500" />
+      case "past_due":
         return <AlertCircle className="h-4 w-4 text-red-500" />
-      case "cancelled":
-      case "expired":
-        return <XCircle className="h-4 w-4 text-gray-500" />
       default:
         return <Clock className="h-4 w-4 text-gray-500" />
     }
   }
 
-  const getStatusLabel = (status: string) => {
+  const getStatusVariant = (status: string) => {
     switch (status) {
       case "paid":
-        return "Pago"
-      case "pending":
-        return "Pendente"
-      case "overdue":
-        return "Vencido"
-      case "cancelled":
-        return "Cancelado"
-      case "completed":
-        return "Concluído"
-      case "processing":
-        return "Processando"
-      case "failed":
-        return "Falhou"
+      case "succeeded":
       case "active":
-        return "Ativo"
-      case "expired":
-        return "Expirado"
+        return "default"
+      case "void":
+      case "canceled":
+      case "uncollectible":
+      case "past_due":
+        return "destructive"
       default:
-        return status
+        return "secondary"
     }
   }
 
-  const getPaymentMethodLabel = (method: string) => {
-    switch (method) {
-      case "credit_card":
-        return "Cartão de Crédito"
-      case "bank_transfer":
-        return "Transferência Bancária"
-      case "pix":
-        return "PIX"
-      default:
-        return method
-    }
-  }
+  // Filtrar dados baseado nos filtros
+  const filteredInvoices = invoices.filter((invoice) => {
+    if (statusFilter !== "all" && invoice.status !== statusFilter) return false
+    if (searchTerm && !invoice.customer.toLowerCase().includes(searchTerm.toLowerCase())) return false
+    return true
+  })
 
-  const getPlanColor = (plan: string) => {
-    switch (plan) {
-      case "enterprise":
-        return "bg-purple-500"
-      case "professional":
-        return "bg-blue-500"
-      case "basic":
-        return "bg-green-500"
-      case "trial":
-        return "bg-yellow-500"
-      default:
-        return "bg-gray-500"
-    }
-  }
+  const filteredPayments = payments.filter((payment) => {
+    if (statusFilter !== "all" && payment.status !== statusFilter) return false
+    if (searchTerm && !payment.id.toLowerCase().includes(searchTerm.toLowerCase())) return true
+    return true
+  })
 
-  // Calculate stats
-  const totalRevenue = payments
-    .filter((p) => p.status === "completed")
-    .reduce((acc, payment) => acc + payment.amount, 0)
-  const pendingAmount = invoices.filter((i) => i.status === "pending").reduce((acc, invoice) => acc + invoice.amount, 0)
-  const overdueAmount = invoices.filter((i) => i.status === "overdue").reduce((acc, invoice) => acc + invoice.amount, 0)
-  const activeSubscriptions = subscriptions.filter((s) => s.status === "active").length
+  const filteredSubscriptions = subscriptions.filter((subscription) => {
+    if (statusFilter !== "all" && subscription.status !== statusFilter) return false
+    if (searchTerm && !subscription.customer.toLowerCase().includes(searchTerm.toLowerCase())) return false
+    return true
+  })
 
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Financeiro e Faturamento</h1>
-          <p className="text-gray-600 mt-2">Gerencie pagamentos, faturas e assinaturas da plataforma</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Financeiro e Faturamento</h1>
+            <p className="text-gray-600 mt-2">Gerencie pagamentos, faturas e assinaturas da plataforma</p>
+          </div>
+          <Button onClick={refetch} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</p>
-                  <p className="text-gray-600">Receita Total</p>
-                  <div className="flex items-center mt-1">
-                    <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                    <span className="text-xs text-green-500">+15%</span>
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <DollarSign className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {billingService.formatCurrency(stats.totalRevenue)}
+                    </p>
+                    <p className="text-gray-600">Receita Total</p>
+                    <div className="flex items-center mt-1">
+                      <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                      <span className="text-xs text-green-500">+{stats.monthlyGrowth}%</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Clock className="h-6 w-6 text-yellow-600" />
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <Clock className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {billingService.formatCurrency(stats.pendingAmount)}
+                    </p>
+                    <p className="text-gray-600">Pendente</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(pendingAmount)}</p>
-                  <p className="text-gray-600">Pendente</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <AlertCircle className="h-6 w-6 text-red-600" />
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <AlertCircle className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {billingService.formatCurrency(stats.overdueAmount)}
+                    </p>
+                    <p className="text-gray-600">Em Atraso</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(overdueAmount)}</p>
-                  <p className="text-gray-600">Em Atraso</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <CreditCard className="h-6 w-6 text-blue-600" />
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <CreditCard className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">{stats.activeSubscriptions}</p>
+                    <p className="text-gray-600">Assinaturas Ativas</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{activeSubscriptions}</p>
-                  <p className="text-gray-600">Assinaturas Ativas</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="invoices">Faturas</TabsTrigger>
-            <TabsTrigger value="payments">Pagamentos</TabsTrigger>
-            <TabsTrigger value="subscriptions">Assinaturas</TabsTrigger>
+            <TabsTrigger value="invoices">Faturas ({invoices.length})</TabsTrigger>
+            <TabsTrigger value="payments">Pagamentos ({payments.length})</TabsTrigger>
+            <TabsTrigger value="subscriptions">Assinaturas ({subscriptions.length})</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -401,15 +243,17 @@ export default function PlatformBilling() {
                         <div className="flex items-center gap-3">
                           {getStatusIcon(invoice.status)}
                           <div>
-                            <p className="font-medium">{invoice.companyName}</p>
+                            <p className="font-medium">{invoice.customer}</p>
                             <p className="text-sm text-gray-500">
-                              {invoice.plan} - {invoice.period}
+                              Vencimento: {billingService.formatDate(invoice.due_date)}
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium">{formatCurrency(invoice.amount)}</p>
-                          <p className="text-sm text-gray-500">{getStatusLabel(invoice.status)}</p>
+                          <p className="font-medium">{billingService.formatCurrency(invoice.amount_due)}</p>
+                          <p className="text-sm text-gray-500">
+                            {billingService.translateInvoiceStatus(invoice.status)}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -430,13 +274,15 @@ export default function PlatformBilling() {
                         <div className="flex items-center gap-3">
                           {getStatusIcon(payment.status)}
                           <div>
-                            <p className="font-medium">{payment.companyName}</p>
-                            <p className="text-sm text-gray-500">{getPaymentMethodLabel(payment.method)}</p>
+                            <p className="font-medium">{payment.id}</p>
+                            <p className="text-sm text-gray-500">{billingService.formatDate(payment.created)}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium">{formatCurrency(payment.amount)}</p>
-                          <p className="text-sm text-gray-500">{new Date(payment.date).toLocaleDateString("pt-BR")}</p>
+                          <p className="font-medium">{billingService.formatCurrency(payment.amount)}</p>
+                          <p className="text-sm text-gray-500">
+                            {billingService.translatePaymentStatus(payment.status)}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -459,7 +305,7 @@ export default function PlatformBilling() {
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
-                        placeholder="Buscar faturas..."
+                        placeholder="Buscar por cliente..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 w-64"
@@ -471,10 +317,11 @@ export default function PlatformBilling() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="draft">Rascunho</SelectItem>
+                        <SelectItem value="open">Pendente</SelectItem>
                         <SelectItem value="paid">Pago</SelectItem>
-                        <SelectItem value="pending">Pendente</SelectItem>
-                        <SelectItem value="overdue">Vencido</SelectItem>
-                        <SelectItem value="cancelled">Cancelado</SelectItem>
+                        <SelectItem value="void">Cancelado</SelectItem>
+                        <SelectItem value="uncollectible">Incobrável</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -484,9 +331,8 @@ export default function PlatformBilling() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Fatura</TableHead>
-                      <TableHead>Empresa</TableHead>
-                      <TableHead>Plano</TableHead>
+                      <TableHead>ID da Fatura</TableHead>
+                      <TableHead>Cliente</TableHead>
                       <TableHead>Valor</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Vencimento</TableHead>
@@ -494,60 +340,41 @@ export default function PlatformBilling() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices
-                      .filter((invoice) => {
-                        if (statusFilter !== "all" && invoice.status !== statusFilter) return false
-                        if (searchTerm && !invoice.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
-                          return false
-                        return true
-                      })
-                      .map((invoice) => (
-                        <TableRow key={invoice.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">#{invoice.id.toString().padStart(6, "0")}</p>
-                              <p className="text-sm text-gray-500">{invoice.period}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Building className="h-4 w-4 text-gray-400" />
-                              <span>{invoice.companyName}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{invoice.plan}</Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">{formatCurrency(invoice.amount)}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(invoice.status)}
-                              <Badge
-                                variant={
-                                  invoice.status === "paid"
-                                    ? "default"
-                                    : invoice.status === "overdue"
-                                      ? "destructive"
-                                      : "secondary"
-                                }
-                              >
-                                {getStatusLabel(invoice.status)}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>{new Date(invoice.dueDate).toLocaleDateString("pt-BR")}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button size="sm" variant="outline">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button size="sm" variant="outline">
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                    {filteredInvoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell>
+                          <span className="font-mono text-sm">{invoice.id}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4 text-gray-400" />
+                            <span>{invoice.customer}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {billingService.formatCurrency(invoice.amount_due)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(invoice.status)}
+                            <Badge variant={getStatusVariant(invoice.status)}>
+                              {billingService.translateInvoiceStatus(invoice.status)}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>{billingService.formatDate(invoice.due_date)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -579,9 +406,9 @@ export default function PlatformBilling() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="completed">Concluído</SelectItem>
+                        <SelectItem value="succeeded">Concluído</SelectItem>
                         <SelectItem value="processing">Processando</SelectItem>
-                        <SelectItem value="failed">Falhou</SelectItem>
+                        <SelectItem value="canceled">Cancelado</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -591,62 +418,38 @@ export default function PlatformBilling() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Empresa</TableHead>
+                      <TableHead>ID do Pagamento</TableHead>
                       <TableHead>Valor</TableHead>
-                      <TableHead>Método</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Data</TableHead>
-                      <TableHead>Fatura</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payments
-                      .filter((payment) => {
-                        if (statusFilter !== "all" && payment.status !== statusFilter) return false
-                        if (searchTerm && !payment.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
-                          return false
-                        return true
-                      })
-                      .map((payment) => (
-                        <TableRow key={payment.id}>
-                          <TableCell>
-                            <span className="font-mono">#{payment.id.toString().padStart(6, "0")}</span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Building className="h-4 w-4 text-gray-400" />
-                              <span>{payment.companyName}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">{formatCurrency(payment.amount)}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{getPaymentMethodLabel(payment.method)}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(payment.status)}
-                              <Badge
-                                variant={
-                                  payment.status === "completed"
-                                    ? "default"
-                                    : payment.status === "failed"
-                                      ? "destructive"
-                                      : "secondary"
-                                }
-                              >
-                                {getStatusLabel(payment.status)}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>{new Date(payment.date).toLocaleDateString("pt-BR")}</TableCell>
-                          <TableCell>
+                    {filteredPayments.map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell>
+                          <span className="font-mono text-sm">{payment.id}</span>
+                        </TableCell>
+                        <TableCell className="font-medium">{billingService.formatCurrency(payment.amount)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(payment.status)}
+                            <Badge variant={getStatusVariant(payment.status)}>
+                              {billingService.translatePaymentStatus(payment.status)}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>{billingService.formatDate(payment.created)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
                             <Button size="sm" variant="outline">
-                              #{payment.invoiceId.toString().padStart(6, "0")}
+                              <Eye className="h-4 w-4" />
                             </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -666,7 +469,7 @@ export default function PlatformBilling() {
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
-                        placeholder="Buscar assinaturas..."
+                        placeholder="Buscar por cliente..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 w-64"
@@ -679,8 +482,9 @@ export default function PlatformBilling() {
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="active">Ativo</SelectItem>
-                        <SelectItem value="cancelled">Cancelado</SelectItem>
-                        <SelectItem value="expired">Expirado</SelectItem>
+                        <SelectItem value="trialing">Trial</SelectItem>
+                        <SelectItem value="past_due">Em Atraso</SelectItem>
+                        <SelectItem value="canceled">Cancelado</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -690,72 +494,46 @@ export default function PlatformBilling() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Empresa</TableHead>
-                      <TableHead>Plano</TableHead>
+                      <TableHead>ID da Assinatura</TableHead>
+                      <TableHead>Cliente</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Valor Mensal</TableHead>
-                      <TableHead>Início</TableHead>
-                      <TableHead>Próximo Faturamento</TableHead>
+                      <TableHead>Fim do Período</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {subscriptions
-                      .filter((subscription) => {
-                        if (statusFilter !== "all" && subscription.status !== statusFilter) return false
-                        if (searchTerm && !subscription.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
-                          return false
-                        return true
-                      })
-                      .map((subscription) => (
-                        <TableRow key={subscription.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Building className="h-4 w-4 text-gray-400" />
-                              <span>{subscription.companyName}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${getPlanColor(subscription.plan)}`}></div>
-                              <Badge variant="outline" className="capitalize">
-                                {subscription.plan}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(subscription.status)}
-                              <Badge
-                                variant={
-                                  subscription.status === "active"
-                                    ? "default"
-                                    : subscription.status === "expired"
-                                      ? "destructive"
-                                      : "secondary"
-                                }
-                              >
-                                {getStatusLabel(subscription.status)}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {subscription.monthlyAmount > 0 ? formatCurrency(subscription.monthlyAmount) : "Grátis"}
-                          </TableCell>
-                          <TableCell>{new Date(subscription.startDate).toLocaleDateString("pt-BR")}</TableCell>
-                          <TableCell>{new Date(subscription.nextBilling).toLocaleDateString("pt-BR")}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button size="sm" variant="outline">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button size="sm" variant="outline">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                    {filteredSubscriptions.map((subscription) => (
+                      <TableRow key={subscription.id}>
+                        <TableCell>
+                          <span className="font-mono text-sm">{subscription.id}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4 text-gray-400" />
+                            <span>{subscription.customer}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(subscription.status)}
+                            <Badge variant={getStatusVariant(subscription.status)}>
+                              {billingService.translateSubscriptionStatus(subscription.status)}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>{billingService.formatDate(subscription.current_period_end)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </CardContent>

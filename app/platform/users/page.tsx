@@ -20,31 +20,21 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Users, Plus, Eye, Edit, Trash2, Building, Search, UserCheck, UserX, Crown } from "lucide-react"
+import { Users, Plus, Eye, Edit, Trash2, Building, Search, UserCheck, UserX, Crown, RefreshCw } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import DashboardLayout from "@/components/dashboard-layout"
-
-interface PlatformUser {
-  id: number
-  username: string
-  email: string
-  firstName: string
-  lastName: string
-  role: "user" | "admin" | "platform_admin"
-  status: "active" | "inactive" | "suspended"
-  company: {
-    id: number
-    name: string
-    domain: string
-  }
-  lastLogin: string
-  createdAt: string
-}
+import { usePlatformUsers } from "@/hooks/use-platform-users"
+import { useCompanies } from "@/hooks/use-companies"
+import { platformUserService } from "@/services/platform-user-service"
+import type { PlatformUser, PlatformUserCreate } from "@/types/platform-user"
 
 export default function PlatformUsers() {
-  const { user, isAuthenticated, loading } = useAuth()
+  const { user, isAuthenticated, loading: authLoading } = useAuth()
   const router = useRouter()
-  const [users, setUsers] = useState<PlatformUser[]>([])
+  const { users, stats, loading, error, createUser, updateUser, deleteUser, updateUserStatus, refetch } =
+    usePlatformUsers()
+  const { companies } = useCompanies()
+
   const [filteredUsers, setFilteredUsers] = useState<PlatformUser[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<PlatformUser | null>(null)
@@ -56,106 +46,27 @@ export default function PlatformUsers() {
   const [message, setMessage] = useState("")
 
   // Form state
-  const [userForm, setUserForm] = useState({
+  const [userForm, setUserForm] = useState<PlatformUserCreate>({
     username: "",
     email: "",
-    firstName: "",
-    lastName: "",
-    role: "user" as const,
-    status: "active" as const,
-    companyId: "",
+    password: "",
+    first_name: "",
+    last_name: "",
+    role: "user",
+    status: "active",
+    company: "",
+    job_title: "",
   })
 
-  // Mock companies for dropdown
-  const companies = [
-    { id: 1, name: "TechCorp Solutions", domain: "techcorp.com" },
-    { id: 2, name: "SecureBank Ltd", domain: "securebank.com" },
-    { id: 3, name: "DataSafe Inc", domain: "datasafe.net" },
-    { id: 4, name: "StartupCo", domain: "startup.co" },
-  ]
-
   useEffect(() => {
-    if (!loading && (!isAuthenticated || user?.role !== "platform_admin")) {
+    if (!authLoading && (!isAuthenticated || user?.role !== "platform_admin")) {
       router.push("/login")
     }
-  }, [isAuthenticated, loading, user])
-
-  useEffect(() => {
-    if (user?.role === "platform_admin") {
-      fetchUsers()
-    }
-  }, [user])
+  }, [isAuthenticated, authLoading, user])
 
   useEffect(() => {
     filterUsers()
   }, [users, searchTerm, statusFilter, roleFilter, companyFilter])
-
-  const fetchUsers = async () => {
-    // Simular dados dos usuários
-    const mockUsers: PlatformUser[] = [
-      {
-        id: 1,
-        username: "joao.silva",
-        email: "joao@techcorp.com",
-        firstName: "João",
-        lastName: "Silva",
-        role: "admin",
-        status: "active",
-        company: { id: 1, name: "TechCorp Solutions", domain: "techcorp.com" },
-        lastLogin: "2023-05-15T10:30:00Z",
-        createdAt: "2023-01-15T09:00:00Z",
-      },
-      {
-        id: 2,
-        username: "maria.santos",
-        email: "maria@securebank.com",
-        firstName: "Maria",
-        lastName: "Santos",
-        role: "admin",
-        status: "active",
-        company: { id: 2, name: "SecureBank Ltd", domain: "securebank.com" },
-        lastLogin: "2023-05-14T16:45:00Z",
-        createdAt: "2023-02-20T14:30:00Z",
-      },
-      {
-        id: 3,
-        username: "pedro.costa",
-        email: "pedro@datasafe.net",
-        firstName: "Pedro",
-        lastName: "Costa",
-        role: "user",
-        status: "active",
-        company: { id: 3, name: "DataSafe Inc", domain: "datasafe.net" },
-        lastLogin: "2023-05-13T08:15:00Z",
-        createdAt: "2023-03-10T11:20:00Z",
-      },
-      {
-        id: 4,
-        username: "ana.oliveira",
-        email: "ana@startup.co",
-        firstName: "Ana",
-        lastName: "Oliveira",
-        role: "user",
-        status: "active",
-        company: { id: 4, name: "StartupCo", domain: "startup.co" },
-        lastLogin: "2023-05-12T13:20:00Z",
-        createdAt: "2023-05-01T10:00:00Z",
-      },
-      {
-        id: 5,
-        username: "carlos.mendes",
-        email: "carlos@techcorp.com",
-        firstName: "Carlos",
-        lastName: "Mendes",
-        role: "user",
-        status: "suspended",
-        company: { id: 1, name: "TechCorp Solutions", domain: "techcorp.com" },
-        lastLogin: "2023-04-20T09:30:00Z",
-        createdAt: "2023-01-20T15:45:00Z",
-      },
-    ]
-    setUsers(mockUsers)
-  }
 
   const filterUsers = () => {
     let filtered = users
@@ -165,9 +76,9 @@ export default function PlatformUsers() {
         (user) =>
           user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.company.name.toLowerCase().includes(searchTerm.toLowerCase()),
+          user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.company.toLowerCase().includes(searchTerm.toLowerCase()),
       )
     }
 
@@ -180,7 +91,7 @@ export default function PlatformUsers() {
     }
 
     if (companyFilter !== "all") {
-      filtered = filtered.filter((user) => user.company.id.toString() === companyFilter)
+      filtered = filtered.filter((user) => user.company === companyFilter)
     }
 
     setFilteredUsers(filtered)
@@ -191,35 +102,17 @@ export default function PlatformUsers() {
     setSaving(true)
 
     try {
-      // Simular criação/edição de usuário
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      const selectedCompany = companies.find((c) => c.id.toString() === userForm.companyId)
-
       if (selectedUser) {
-        // Editar usuário existente
-        setUsers(
-          users.map((user) =>
-            user.id === selectedUser.id
-              ? {
-                  ...user,
-                  ...userForm,
-                  company: selectedCompany || user.company,
-                }
-              : user,
-          ),
-        )
+        // Editar usuário existente - não incluir password se estiver vazio
+        const updateData = { ...userForm }
+        if (!updateData.password) {
+          delete updateData.password
+        }
+        await updateUser(selectedUser.id, updateData)
         setMessage("Usuário atualizado com sucesso!")
       } else {
         // Criar novo usuário
-        const newUser: PlatformUser = {
-          id: Date.now(),
-          ...userForm,
-          company: selectedCompany || companies[0],
-          lastLogin: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-        }
-        setUsers([...users, newUser])
+        await createUser(userForm)
         setMessage("Usuário criado com sucesso!")
       }
 
@@ -227,7 +120,8 @@ export default function PlatformUsers() {
       resetForm()
       setTimeout(() => setMessage(""), 3000)
     } catch (error) {
-      setMessage("Erro ao salvar usuário")
+      setMessage(error instanceof Error ? error.message : "Erro ao salvar usuário")
+      setTimeout(() => setMessage(""), 5000)
     } finally {
       setSaving(false)
     }
@@ -237,11 +131,13 @@ export default function PlatformUsers() {
     setUserForm({
       username: "",
       email: "",
-      firstName: "",
-      lastName: "",
+      password: "",
+      first_name: "",
+      last_name: "",
       role: "user",
       status: "active",
-      companyId: "",
+      company: "",
+      job_title: "",
     })
     setSelectedUser(null)
   }
@@ -251,36 +147,39 @@ export default function PlatformUsers() {
     setUserForm({
       username: user.username,
       email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      password: "", // Não preencher a senha
+      first_name: user.first_name,
+      last_name: user.last_name,
       role: user.role,
       status: user.status,
-      companyId: user.company.id.toString(),
+      company: user.company,
+      job_title: user.job_title,
     })
     setIsDialogOpen(true)
   }
 
   const handleDelete = async (userId: number) => {
     if (confirm("Tem certeza que deseja excluir este usuário?")) {
-      setUsers(users.filter((user) => user.id !== userId))
-      setMessage("Usuário excluído com sucesso!")
-      setTimeout(() => setMessage(""), 3000)
+      try {
+        await deleteUser(userId)
+        setMessage("Usuário excluído com sucesso!")
+        setTimeout(() => setMessage(""), 3000)
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Erro ao excluir usuário")
+        setTimeout(() => setMessage(""), 5000)
+      }
     }
   }
 
   const handleStatusChange = async (userId: number, newStatus: "active" | "suspended") => {
-    setUsers(
-      users.map((user) =>
-        user.id === userId
-          ? {
-              ...user,
-              status: newStatus,
-            }
-          : user,
-      ),
-    )
-    setMessage(`Usuário ${newStatus === "active" ? "ativado" : "suspenso"} com sucesso!`)
-    setTimeout(() => setMessage(""), 3000)
+    try {
+      await updateUserStatus(userId, newStatus)
+      setMessage(`Usuário ${newStatus === "active" ? "ativado" : "suspenso"} com sucesso!`)
+      setTimeout(() => setMessage(""), 3000)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Erro ao atualizar status")
+      setTimeout(() => setMessage(""), 5000)
+    }
   }
 
   const getRoleIcon = (role: string) => {
@@ -296,34 +195,20 @@ export default function PlatformUsers() {
     }
   }
 
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case "platform_admin":
-        return "Platform Admin"
-      case "admin":
-        return "Admin"
-      case "user":
-        return "Usuário"
-      default:
-        return role
-    }
-  }
+  // Get unique companies for filter
+  const uniqueCompanies = Array.from(new Set(users.map((user) => user.company)))
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-500"
-      case "inactive":
-        return "bg-gray-500"
-      case "suspended":
-        return "bg-red-500"
-      default:
-        return "bg-gray-500"
-    }
-  }
-
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>
+  if (authLoading || loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            Carregando...
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   if (!user || user.role !== "platform_admin") return null
@@ -337,202 +222,232 @@ export default function PlatformUsers() {
             <h1 className="text-3xl font-bold text-gray-900">Gerenciamento de Usuários</h1>
             <p className="text-gray-600 mt-2">Gerencie todos os usuários da plataforma</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Usuário
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>{selectedUser ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
-                <DialogDescription>
-                  {selectedUser ? "Edite as informações do usuário" : "Adicione um novo usuário à plataforma"}
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={refetch} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Usuário
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>{selectedUser ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
+                  <DialogDescription>
+                    {selectedUser ? "Edite as informações do usuário" : "Adicione um novo usuário à plataforma"}
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="first_name">Nome</Label>
+                      <Input
+                        id="first_name"
+                        value={userForm.first_name}
+                        onChange={(e) => setUserForm({ ...userForm, first_name: e.target.value })}
+                        placeholder="Nome"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="last_name">Sobrenome</Label>
+                      <Input
+                        id="last_name"
+                        value={userForm.last_name}
+                        onChange={(e) => setUserForm({ ...userForm, last_name: e.target.value })}
+                        placeholder="Sobrenome"
+                        required
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">Nome</Label>
+                    <Label htmlFor="username">Nome de Usuário</Label>
                     <Input
-                      id="firstName"
-                      value={userForm.firstName}
-                      onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })}
-                      placeholder="Nome"
+                      id="username"
+                      value={userForm.username}
+                      onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                      placeholder="nome.usuario"
                       required
                     />
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Sobrenome</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
-                      id="lastName"
-                      value={userForm.lastName}
-                      onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })}
-                      placeholder="Sobrenome"
+                      id="email"
+                      type="email"
+                      value={userForm.email}
+                      onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                      placeholder="usuario@empresa.com"
                       required
                     />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="username">Nome de Usuário</Label>
-                  <Input
-                    id="username"
-                    value={userForm.username}
-                    onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                    placeholder="nome.usuario"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={userForm.email}
-                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                    placeholder="usuario@empresa.com"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="company">Empresa</Label>
-                  <Select
-                    value={userForm.companyId}
-                    onValueChange={(value) => setUserForm({ ...userForm, companyId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma empresa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {companies.map((company) => (
-                        <SelectItem key={company.id} value={company.id.toString()}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="role">Função</Label>
-                    <Select
-                      value={userForm.role}
-                      onValueChange={(value: any) => setUserForm({ ...userForm, role: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">Usuário</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="platform_admin">Platform Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="password">
+                      {selectedUser ? "Nova Senha (deixe em branco para manter)" : "Senha"}
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={userForm.password}
+                      onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                      placeholder="••••••••"
+                      required={!selectedUser}
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select
-                      value={userForm.status}
-                      onValueChange={(value: any) => setUserForm({ ...userForm, status: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Ativo</SelectItem>
-                        <SelectItem value="inactive">Inativo</SelectItem>
-                        <SelectItem value="suspended">Suspenso</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={saving}>
-                    {saving ? "Salvando..." : selectedUser ? "Atualizar" : "Criar"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="company">Empresa</Label>
+                      <Input
+                        id="company"
+                        value={userForm.company}
+                        onChange={(e) => setUserForm({ ...userForm, company: e.target.value })}
+                        placeholder="Nome da empresa"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="job_title">Cargo</Label>
+                      <Input
+                        id="job_title"
+                        value={userForm.job_title}
+                        onChange={(e) => setUserForm({ ...userForm, job_title: e.target.value })}
+                        placeholder="Cargo do usuário"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Função</Label>
+                      <Select
+                        value={userForm.role}
+                        onValueChange={(value: any) => setUserForm({ ...userForm, role: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">Usuário</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="platform_admin">Platform Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status</Label>
+                      <Select
+                        value={userForm.status}
+                        onValueChange={(value: any) => setUserForm({ ...userForm, status: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Ativo</SelectItem>
+                          <SelectItem value="inactive">Inativo</SelectItem>
+                          <SelectItem value="suspended">Suspenso</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={saving}>
+                      {saving ? "Salvando..." : selectedUser ? "Atualizar" : "Criar"}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
-        {message && (
-          <Alert className="mb-6">
-            <AlertDescription>{message}</AlertDescription>
+        {/* Error Alert */}
+        {error && (
+          <Alert className="mb-6 border-red-200 bg-red-50">
+            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Success Message */}
+        {message && !error && (
+          <Alert className="mb-6 border-green-200 bg-green-50">
+            <AlertDescription className="text-green-800">{message}</AlertDescription>
           </Alert>
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-600" />
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                    <p className="text-gray-600">Total de Usuários</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{users.length}</p>
-                  <p className="text-gray-600">Total de Usuários</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <UserCheck className="h-6 w-6 text-green-600" />
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <UserCheck className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">{stats.activeUsers}</p>
+                    <p className="text-gray-600">Usuários Ativos</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">
-                    {users.filter((u) => u.status === "active").length}
-                  </p>
-                  <p className="text-gray-600">Usuários Ativos</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Crown className="h-6 w-6 text-purple-600" />
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Crown className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">{stats.adminUsers}</p>
+                    <p className="text-gray-600">Administradores</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{users.filter((u) => u.role === "admin").length}</p>
-                  <p className="text-gray-600">Administradores</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <UserX className="h-6 w-6 text-red-600" />
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <UserX className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">{stats.suspendedUsers}</p>
+                    <p className="text-gray-600">Suspensos</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">
-                    {users.filter((u) => u.status === "suspended").length}
-                  </p>
-                  <p className="text-gray-600">Suspensos</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Filters and Table */}
         <Card>
@@ -580,9 +495,9 @@ export default function PlatformUsers() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas Empresas</SelectItem>
-                    {companies.map((company) => (
-                      <SelectItem key={company.id} value={company.id.toString()}>
-                        {company.name}
+                    {uniqueCompanies.map((company) => (
+                      <SelectItem key={company} value={company}>
+                        {company}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -608,9 +523,7 @@ export default function PlatformUsers() {
                   <TableRow key={user.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium">
-                          {user.firstName} {user.lastName}
-                        </p>
+                        <p className="font-medium">{platformUserService.getFullName(user)}</p>
                         <p className="text-sm text-gray-500">{user.email}</p>
                         <p className="text-xs text-gray-400">@{user.username}</p>
                       </div>
@@ -619,20 +532,22 @@ export default function PlatformUsers() {
                       <div className="flex items-center gap-2">
                         <Building className="h-4 w-4 text-gray-400" />
                         <div>
-                          <p className="font-medium">{user.company.name}</p>
-                          <p className="text-sm text-gray-500">{user.company.domain}</p>
+                          <p className="font-medium">{user.company}</p>
+                          <p className="text-sm text-gray-500">{user.job_title}</p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getRoleIcon(user.role)}
-                        <Badge variant="outline">{getRoleLabel(user.role)}</Badge>
+                        <Badge variant="outline">{platformUserService.translateRole(user.role)}</Badge>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${getStatusColor(user.status)}`}></div>
+                        <div
+                          className={`w-2 h-2 rounded-full ${platformUserService.getStatusColor(user.status)}`}
+                        ></div>
                         <Badge
                           variant={
                             user.status === "active"
@@ -643,12 +558,12 @@ export default function PlatformUsers() {
                           }
                           className="capitalize"
                         >
-                          {user.status === "active" ? "Ativo" : user.status === "suspended" ? "Suspenso" : "Inativo"}
+                          {platformUserService.translateStatus(user.status)}
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell>{new Date(user.lastLogin).toLocaleDateString("pt-BR")}</TableCell>
-                    <TableCell>{new Date(user.createdAt).toLocaleDateString("pt-BR")}</TableCell>
+                    <TableCell>{platformUserService.formatDate(user.last_login)}</TableCell>
+                    <TableCell>{platformUserService.formatDate(user.created_at)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button size="sm" variant="outline" onClick={() => router.push(`/platform/users/${user.id}`)}>
