@@ -33,7 +33,7 @@ export default function ResetPasswordPage() {
     if (tokenParam) {
       setToken(tokenParam)
     } else {
-      setErrors({ token: t("auth.resetPassword.errors.invalidToken") })
+      setErrors({ token: t.auth.resetPassword.errors.invalidToken })
     }
   }, [searchParams])
 
@@ -47,9 +47,9 @@ export default function ResetPasswordPage() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-    if (!formData.password) newErrors.password = t("auth.resetPassword.errors.passwordRequired")
+    if (!formData.password) newErrors.password = t.auth.resetPassword.errors.passwordRequired
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = t("auth.resetPassword.errors.passwordMismatch")
+      newErrors.confirmPassword = t.auth.resetPassword.errors.passwordMismatch
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -80,7 +80,7 @@ export default function ResetPasswordPage() {
         }, 3000)
       } else {
         const data = await response.json()
-        throw new Error(data.detail || t("auth.resetPassword.errors.invalidToken"))
+        throw new Error(data.detail || t.auth.resetPassword.errors.invalidToken)
       }
     } catch (err: any) {
       setErrors({
@@ -125,20 +125,20 @@ export default function ResetPasswordPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Shield className="h-8 w-8 text-blue-600 mr-2" />
-              <CardTitle className="text-2xl font-bold">{t("auth.resetPassword.title")}</CardTitle>
+              <CardTitle className="text-2xl font-bold">{t.auth.resetPassword.title}</CardTitle>
             </div>
             <Button variant="ghost" size="sm" onClick={toggleLanguage}>
               <Globe className="h-4 w-4 mr-1" />
               {language === "pt" ? "EN" : "PT"}
             </Button>
           </div>
-          <CardDescription className="text-center">{t("auth.resetPassword.subtitle")}</CardDescription>
+          <CardDescription className="text-center">{t.auth.resetPassword.subtitle}</CardDescription>
         </CardHeader>
         <CardContent>
           {success ? (
             <div className="space-y-4">
               <Alert>
-                <AlertDescription>{t("auth.resetPassword.success")}</AlertDescription>
+                <AlertDescription>{t.auth.resetPassword.success}</AlertDescription>
               </Alert>
               <div className="text-center text-sm text-muted-foreground">
                 {language === "pt" ? "Redirecionando para o login..." : "Redirecting to login..."}
@@ -156,7 +156,7 @@ export default function ResetPasswordPage() {
                 <div className="space-y-2">
                   <Label htmlFor="password" className="flex items-center gap-2">
                     <Lock className="h-4 w-4" />
-                    {t("auth.resetPassword.password")}
+                    {t.auth.resetPassword.password}
                   </Label>
                   <Input
                     id="password"
@@ -164,7 +164,7 @@ export default function ResetPasswordPage() {
                     type="password"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder={t("auth.resetPassword.passwordPlaceholder")}
+                    placeholder={t.auth.resetPassword.passwordPlaceholder}
                     className={errors.password ? "border-red-500" : ""}
                   />
                   {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
@@ -173,7 +173,7 @@ export default function ResetPasswordPage() {
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword" className="flex items-center gap-2">
                     <Check className="h-4 w-4" />
-                    {t("auth.resetPassword.confirmPassword")}
+                    {t.auth.resetPassword.confirmPassword}
                   </Label>
                   <Input
                     id="confirmPassword"
@@ -181,14 +181,14 @@ export default function ResetPasswordPage() {
                     type="password"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    placeholder={t("auth.resetPassword.confirmPasswordPlaceholder")}
+                    placeholder={t.auth.resetPassword.confirmPasswordPlaceholder}
                     className={errors.confirmPassword ? "border-red-500" : ""}
                   />
                   {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? t("auth.resetPassword.resetting") : t("auth.resetPassword.reset")}
+                  {loading ? t.auth.resetPassword.resetting : t.auth.resetPassword.reset}
                 </Button>
               </form>
             </>

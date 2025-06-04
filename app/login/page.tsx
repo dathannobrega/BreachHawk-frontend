@@ -93,14 +93,14 @@ export default function LoginPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Shield className="h-8 w-8 text-blue-600 mr-2" />
-              <CardTitle className="text-2xl font-bold">{t("auth.login.title")}</CardTitle>
+              <CardTitle className="text-2xl font-bold">{t.auth.login.title}</CardTitle>
             </div>
             <Button variant="ghost" size="sm" onClick={toggleLanguage}>
               <Globe className="h-4 w-4 mr-1" />
               {language === "pt" ? "EN" : "PT"}
             </Button>
           </div>
-          <CardDescription className="text-center">{t("auth.login.subtitle")}</CardDescription>
+          <CardDescription className="text-center">{t.auth.login.subtitle}</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -113,7 +113,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label htmlFor="username" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                {t("auth.login.username")}
+                {t.auth.login.username}
               </Label>
               <Input
                 id="username"
@@ -121,7 +121,7 @@ export default function LoginPage() {
                 type="text"
                 value={formData.username}
                 onChange={handleChange}
-                placeholder={t("auth.login.usernamePlaceholder")}
+                placeholder={t.auth.login.usernamePlaceholder}
                 required
               />
             </div>
@@ -129,7 +129,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label htmlFor="password" className="flex items-center gap-2">
                 <Lock className="h-4 w-4" />
-                {t("auth.login.password")}
+                {t.auth.login.password}
               </Label>
               <Input
                 id="password"
@@ -137,18 +137,18 @@ export default function LoginPage() {
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder={t("auth.login.passwordPlaceholder")}
+                placeholder={t.auth.login.passwordPlaceholder}
                 required
               />
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? t("auth.login.loggingIn") : t("auth.login.loginButton")}
+              {loading ? t.auth.login.loggingIn : t.auth.login.loginButton}
             </Button>
 
             <div className="text-center mt-2">
               <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                {t("auth.login.forgotPassword")}
+                {t.auth.login.forgotPassword}
               </Link>
             </div>
           </form>
@@ -159,27 +159,27 @@ export default function LoginPage() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">{t("auth.login.or")}</span>
+                <span className="bg-background px-2 text-muted-foreground">{t.auth.login.or}</span>
               </div>
             </div>
 
             <Button type="button" variant="outline" className="w-full mt-4" onClick={handleGoogleLogin}>
               <Chrome className="h-4 w-4 mr-2" />
-              {t("auth.login.googleLogin")}
+              {t.auth.login.googleLogin}
             </Button>
           </div>
 
           <div className="mt-6 text-center text-sm">
-            <span className="text-muted-foreground">{t("auth.login.noAccount")} </span>
+            <span className="text-muted-foreground">{t.auth.login.noAccount} </span>
             <Link href="/register" className="text-blue-600 hover:underline">
-              {t("auth.login.register")}
+              {t.auth.login.register}
             </Link>
           </div>
 
           <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-            <p className="font-semibold mb-1">{t("auth.login.testCredentials")}</p>
-            <p>{t("auth.login.adminCredentials")}</p>
-            <p>{t("auth.login.userCredentials")}</p>
+            <p className="font-semibold mb-1">{t.auth.login.testCredentials}</p>
+            <p>{t.auth.login.adminCredentials}</p>
+            <p>{t.auth.login.userCredentials}</p>
           </div>
         </CardContent>
       </Card>
