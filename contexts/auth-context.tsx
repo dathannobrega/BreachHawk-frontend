@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 
+// Atualizar a interface User para incluir todos os campos do backend
 interface User {
   id: string
   username: string
@@ -10,13 +11,12 @@ interface User {
   firstName?: string
   lastName?: string
   role: "admin" | "user" | "platform_admin"
-  company?: {
-    id: string
-    name: string
-    domain: string
-    logo?: string
-    settings?: any
-  }
+  profileImage?: string
+  organization?: string
+  contact?: string
+  company?: string
+  jobTitle?: string
+  isSubscribed?: boolean
 }
 
 interface AuthContextType {
@@ -45,16 +45,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ? "https://www.protexion.cloud/api"
       : "https://dev.protexion.cloud")
 
+  // No useEffect, atualizar para buscar dados atuais do usuário
   useEffect(() => {
-    // Verificar se há token salvo no localStorage
-    const savedToken = localStorage.getItem("access_token")
-    const savedUser = localStorage.getItem("user")
-
-    if (savedToken && savedUser) {
-      setToken(savedToken)
-      setUser(JSON.parse(savedUser))
+    const fetchCurrentUser = async () => {
+      const savedToken = localStorage.getItem("access_token")
+      if (savedToken) {
+        try {
+          const response = await fetch(`${apiUrl}/api/v1/users/me`, {
+            headers: {
+              Authorization: `Bearer ${savedToken}`,
+            },
+          })
+          if (response.ok) {
+            const userData = await response.json()
+            setToken(savedToken)
+            setUser(userData)
+            localStorage.setItem("user", JSON.stringify(userData))
+          } else {
+            // Token inválido, limpar dados
+            localStorage.removeItem("access_token")
+            localStorage.removeItem("user")
+          }
+        } catch (error) {
+          console.error("Erro ao buscar usuário:", error)
+        }
+      }
+      setLoading(false)
     }
-    setLoading(false)
+
+    fetchCurrentUser()
   }, [])
 
   const login = async (credentials: { username: string; password: string }) => {
