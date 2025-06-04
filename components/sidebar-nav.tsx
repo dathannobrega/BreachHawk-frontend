@@ -32,38 +32,48 @@ export default function SidebarNav() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
 
+  // Verificação de segurança para evitar erros
   if (!user) return null
+  if (!t || !t.sidebar) {
+    return (
+      <div className="hidden md:flex md:w-80 md:flex-col md:fixed md:inset-y-0 bg-white border-r shadow-sm">
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-pulse text-gray-400">Carregando...</div>
+        </div>
+      </div>
+    )
+  }
 
   const getNavItems = () => {
     if (user.role === "user") {
       return [
         {
-          label: t.sidebar.dashboard,
+          label: t.sidebar.dashboard || "Dashboard",
           icon: LayoutDashboard,
           href: "/dashboard",
           description: "Visão geral da sua conta",
         },
         {
-          label: t.sidebar.search,
+          label: t.sidebar.search || "Pesquisar",
           icon: Search,
           href: "/search",
           description: "Pesquisar vazamentos",
         },
         {
-          label: t.sidebar.leaks,
+          label: t.sidebar.leaks || "Vazamentos",
           icon: Shield,
           href: "/leaks",
           description: "Vazamentos detectados",
           badge: "3", // Exemplo de badge
         },
         {
-          label: t.sidebar.reports,
+          label: t.sidebar.reports || "Relatórios",
           icon: FileText,
           href: "/reports",
           description: "Relatórios detalhados",
         },
         {
-          label: t.sidebar.alerts,
+          label: t.sidebar.alerts || "Alertas",
           icon: Bell,
           href: "/alerts",
           description: "Configurar alertas",
@@ -74,31 +84,31 @@ export default function SidebarNav() {
     if (user.role === "admin") {
       return [
         {
-          label: t.sidebar.dashboard,
+          label: t.sidebar.dashboard || "Dashboard",
           icon: LayoutDashboard,
           href: "/admin/dashboard",
           description: "Painel administrativo",
         },
         {
-          label: t.sidebar.users,
+          label: t.sidebar.users || "Usuários",
           icon: Users,
           href: "/admin/users",
           description: "Gerenciar usuários",
         },
         {
-          label: t.sidebar.domains,
+          label: t.sidebar.domains || "Domínios",
           icon: Globe,
           href: "/admin/domains",
           description: "Domínios monitorados",
         },
         {
-          label: t.sidebar.analytics,
+          label: t.sidebar.analytics || "Analytics",
           icon: BarChart3,
           href: "/admin/analytics",
           description: "Análises e métricas",
         },
         {
-          label: t.sidebar.security,
+          label: t.sidebar.security || "Segurança",
           icon: Lock,
           href: "/admin/security",
           description: "Configurações de segurança",
@@ -109,31 +119,31 @@ export default function SidebarNav() {
     if (user.role === "platform_admin") {
       return [
         {
-          label: t.sidebar.dashboard,
+          label: t.sidebar.dashboard || "Dashboard",
           icon: LayoutDashboard,
           href: "/platform/dashboard",
           description: "Painel da plataforma",
         },
         {
-          label: t.sidebar.companies,
+          label: t.sidebar.companies || "Empresas",
           icon: Building,
           href: "/platform/companies",
           description: "Gerenciar empresas",
         },
         {
-          label: t.sidebar.users,
+          label: t.sidebar.users || "Usuários",
           icon: Users,
           href: "/platform/users",
           description: "Todos os usuários",
         },
         {
-          label: t.sidebar.billing,
+          label: t.sidebar.billing || "Financeiro",
           icon: CreditCard,
           href: "/platform/billing",
           description: "Faturamento e pagamentos",
         },
         {
-          label: t.sidebar.analytics,
+          label: t.sidebar.analytics || "Analytics",
           icon: BarChart3,
           href: "/platform/analytics",
           description: "Analytics da plataforma",
@@ -245,7 +255,7 @@ export default function SidebarNav() {
                 }`}
               />
               <div className="flex-1 text-left">
-                <span className="font-medium">{t.sidebar.settings}</span>
+                <span className="font-medium">{t.sidebar.settings || "Configurações"}</span>
                 <p
                   className={`text-xs mt-0.5 ${
                     pathname === "/settings" || pathname === "/admin/settings" ? "text-blue-100" : "text-gray-500"
@@ -267,7 +277,7 @@ export default function SidebarNav() {
           onClick={logout}
         >
           <LogOut className="h-4 w-4 mr-3" />
-          {t.sidebar.logout}
+          {t.sidebar.logout || "Sair"}
         </Button>
       </div>
     </div>
