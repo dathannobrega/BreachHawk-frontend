@@ -18,7 +18,7 @@ Aplicação de monitoramento de vazamentos de dados desenvolvida com React, Vite
 
 ## Instalação
 
-```bash
+\`\`\`bash
 # Clone o repositório
 git clone https://github.com/seu-usuario/deep-protexion.git
 
@@ -34,7 +34,7 @@ yarn
 npm run dev
 # ou
 yarn dev
-```
+\`\`\`
 
 ## Scripts
 
@@ -45,7 +45,7 @@ yarn dev
 
 ## Estrutura do Projeto
 
-```
+\`\`\`
 deep-protexion/
 ├── public/                  # Arquivos estáticos
 ├── src/                     # Código fonte
@@ -66,7 +66,7 @@ deep-protexion/
 ├── tailwind.config.js       # Configuração do TailwindCSS
 ├── postcss.config.js        # Configuração do PostCSS
 └── package.json             # Dependências e scripts
-```
+\`\`\`
 
 ## Licença
 
