@@ -1,103 +1,43 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Building, Users, DollarSign, TrendingUp, CreditCard } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Building, Users, DollarSign, TrendingUp, CreditCard, RefreshCw, UserCheck } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import DashboardLayout from "@/components/dashboard-layout"
+import { usePlatformDashboard } from "@/hooks/use-platform-dashboard"
+import { platformDashboardService } from "@/services/platform-dashboard-service"
 
 export default function PlatformDashboard() {
-  const { user, isAuthenticated, loading } = useAuth()
+  const { user, isAuthenticated, loading: authLoading } = useAuth()
   const router = useRouter()
-  const [period, setPeriod] = useState("month")
+  const { stats, topCompanies, recentActivity, loading, error, refetch } = usePlatformDashboard()
 
   useEffect(() => {
-    if (!loading && (!isAuthenticated || user?.role !== "platform_admin")) {
+    if (!authLoading && (!isAuthenticated || user?.role !== "platform_admin")) {
       router.push("/login")
     }
-  }, [isAuthenticated, loading, user])
+  }, [isAuthenticated, authLoading, user])
 
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>
+  if (authLoading || loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            Carregando...
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   if (!user || user.role !== "platform_admin") return null
-
-  // Dados simulados para admin da plataforma
-  const platformStats = {
-    totalCompanies: 156,
-    totalUsers: 2847,
-    monthlyRevenue: 45600,
-    activeSubscriptions: 142,
-  }
-
-  const revenueData = [
-    { month: "Jan", revenue: 32000, subscriptions: 120 },
-    { month: "Fev", revenue: 38000, subscriptions: 135 },
-    { month: "Mar", revenue: 45600, subscriptions: 142 },
-  ]
-
-  const topCompanies = [
-    {
-      id: 1,
-      name: "TechCorp Solutions",
-      plan: "Enterprise",
-      users: 45,
-      revenue: 2500,
-      status: "active",
-    },
-    {
-      id: 2,
-      name: "SecureBank Ltd",
-      plan: "Professional",
-      users: 32,
-      revenue: 1800,
-      status: "active",
-    },
-    {
-      id: 3,
-      name: "DataSafe Inc",
-      plan: "Professional",
-      users: 28,
-      revenue: 1800,
-      status: "trial",
-    },
-  ]
-
-  const recentActivity = [
-    {
-      id: 1,
-      company: "TechCorp Solutions",
-      action: "Upgrade to Enterprise",
-      date: "2023-05-15",
-      value: "+$1000",
-    },
-    {
-      id: 2,
-      company: "NewStartup Co",
-      action: "New Registration",
-      date: "2023-05-14",
-      value: "+$299",
-    },
-    {
-      id: 3,
-      company: "SecureBank Ltd",
-      action: "Payment Received",
-      date: "2023-05-13",
-      value: "+$1800",
-    },
-  ]
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value)
-  }
 
   return (
     <DashboardLayout>
@@ -109,94 +49,97 @@ export default function PlatformDashboard() {
             <p className="text-gray-600 mt-2">Visão geral completa do BreachHawk</p>
           </div>
           <div className="flex items-center gap-4">
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="week">Semana</SelectItem>
-                <SelectItem value="month">Mês</SelectItem>
-                <SelectItem value="quarter">Trimestre</SelectItem>
-                <SelectItem value="year">Ano</SelectItem>
-              </SelectContent>
-            </Select>
+            <Button variant="outline" onClick={refetch} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
           </div>
         </div>
 
+        {/* Error Alert */}
+        {error && (
+          <Alert className="mb-6 border-red-200 bg-red-50">
+            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          </Alert>
+        )}
+
         {/* Platform Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{platformStats.totalCompanies}</p>
-                  <p className="text-gray-600">Empresas Cadastradas</p>
-                  <div className="flex items-center mt-1">
-                    <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                    <span className="text-xs text-green-500">+12%</span>
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Building className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalCompanies}</p>
+                    <p className="text-gray-600">Empresas Cadastradas</p>
+                    <div className="flex items-center mt-1">
+                      <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                      <span className="text-xs text-green-500">+{stats.growthMetrics.companiesGrowth}%</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Users className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{platformStats.totalUsers}</p>
-                  <p className="text-gray-600">Usuários Ativos</p>
-                  <div className="flex items-center mt-1">
-                    <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                    <span className="text-xs text-green-500">+8%</span>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Users className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                    <p className="text-gray-600">Usuários Totais</p>
+                    <div className="flex items-center mt-1">
+                      <UserCheck className="h-3 w-3 text-blue-500 mr-1" />
+                      <span className="text-xs text-blue-500">{stats.activeUsers} ativos</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(platformStats.monthlyRevenue)}</p>
-                  <p className="text-gray-600">Receita Mensal</p>
-                  <div className="flex items-center mt-1">
-                    <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                    <span className="text-xs text-green-500">+15%</span>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <DollarSign className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {platformDashboardService.formatCurrency(stats.monthlyRevenue)}
+                    </p>
+                    <p className="text-gray-600">Receita Mensal</p>
+                    <div className="flex items-center mt-1">
+                      <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                      <span className="text-xs text-green-500">+{stats.growthMetrics.revenueGrowth}%</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <CreditCard className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{platformStats.activeSubscriptions}</p>
-                  <p className="text-gray-600">Assinaturas Ativas</p>
-                  <div className="flex items-center mt-1">
-                    <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                    <span className="text-xs text-green-500">+5%</span>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <CreditCard className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">{stats.activeSubscriptions}</p>
+                    <p className="text-gray-600">Assinaturas Ativas</p>
+                    <div className="flex items-center mt-1">
+                      <span className="text-xs text-gray-500">{stats.activeCompanies} empresas ativas</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Top Companies */}
@@ -221,16 +164,22 @@ export default function PlatformDashboard() {
                       <TableCell>
                         <div>
                           <p className="font-medium">{company.name}</p>
-                          <Badge variant={company.status === "active" ? "default" : "secondary"} className="text-xs">
-                            {company.status === "active" ? "Ativo" : "Trial"}
+                          <p className="text-sm text-gray-500">{company.domain}</p>
+                          <Badge
+                            variant={company.status === "active" ? "default" : "secondary"}
+                            className="text-xs mt-1"
+                          >
+                            {platformDashboardService.translateStatus(company.status)}
                           </Badge>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{company.plan}</Badge>
+                        <Badge variant="outline">{platformDashboardService.translatePlan(company.plan)}</Badge>
                       </TableCell>
-                      <TableCell>{company.users}</TableCell>
-                      <TableCell className="font-medium">{formatCurrency(company.revenue)}</TableCell>
+                      <TableCell>{company.userCount}</TableCell>
+                      <TableCell className="font-medium">
+                        {platformDashboardService.formatCurrency(company.revenue)}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -242,7 +191,7 @@ export default function PlatformDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Atividade Recente</CardTitle>
-              <CardDescription>Últimas transações e eventos</CardDescription>
+              <CardDescription>Últimas ações na plataforma</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -250,12 +199,14 @@ export default function PlatformDashboard() {
                   <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="font-medium">{activity.company}</p>
-                      <p className="text-sm text-gray-600">{activity.action}</p>
-                      <p className="text-xs text-gray-500">{activity.date}</p>
+                      <p className="text-sm text-gray-600">{activity.description}</p>
+                      <p className="text-xs text-gray-500">{platformDashboardService.formatDate(activity.date)}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium text-green-600">{activity.value}</p>
-                    </div>
+                    {activity.value && (
+                      <div className="text-right">
+                        <p className="font-medium text-green-600">{activity.value}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -266,32 +217,28 @@ export default function PlatformDashboard() {
         {/* Revenue Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Evolução da Receita</CardTitle>
-            <CardDescription>Receita e assinaturas nos últimos meses</CardDescription>
+            <CardTitle>Resumo de Planos</CardTitle>
+            <CardDescription>Distribuição de empresas por plano</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {revenueData.map((data, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <span className="font-bold text-blue-600">{data.month}</span>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {["trial", "basic", "professional", "enterprise"].map((plan) => {
+                const companiesInPlan = topCompanies.filter((c) => c.plan === plan).length
+                const revenue = topCompanies.filter((c) => c.plan === plan).reduce((sum, c) => sum + c.revenue, 0)
+
+                return (
+                  <div key={plan} className="p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium">{platformDashboardService.translatePlan(plan)}</h3>
+                      <Badge variant="outline">{companiesInPlan}</Badge>
                     </div>
-                    <div>
-                      <p className="font-medium">Receita: {formatCurrency(data.revenue)}</p>
-                      <p className="text-sm text-gray-600">Assinaturas: {data.subscriptions}</p>
-                    </div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {platformDashboardService.formatCurrency(revenue)}
+                    </p>
+                    <p className="text-sm text-gray-600">Receita total</p>
                   </div>
-                  <div className="text-right">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{ width: `${(data.revenue / 50000) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>

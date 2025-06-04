@@ -74,11 +74,11 @@ export default function PlatformUsers() {
     if (searchTerm) {
       filtered = filtered.filter(
         (user) =>
-          user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (user.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.company.toLowerCase().includes(searchTerm.toLowerCase()),
+          (user.first_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (user.last_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (user.company || "").toLowerCase().includes(searchTerm.toLowerCase()),
       )
     }
 
@@ -196,7 +196,7 @@ export default function PlatformUsers() {
   }
 
   // Get unique companies for filter
-  const uniqueCompanies = Array.from(new Set(users.map((user) => user.company)))
+  const uniqueCompanies = Array.from(new Set(users.map((user) => user.company).filter(Boolean)))
 
   if (authLoading || loading) {
     return (
