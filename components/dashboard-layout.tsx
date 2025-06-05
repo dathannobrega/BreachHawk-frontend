@@ -16,21 +16,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50">
       {/* Sidebar - Fixed */}
-      <div className="fixed inset-y-0 left-0 z-40 w-64">
+      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 overflow-y-auto">
         <SidebarNav />
-      </div>
+      </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 ml-64 flex flex-col">
+      <div className="pl-64 flex flex-col min-h-screen">
         {/* Header - Fixed at top */}
         <UserHeader />
 
         {/* Page Content - Scrollable */}
-        <main className="flex-1 overflow-auto">
-          <div className="p-6">{children}</div>
-        </main>
+        <main className="flex-1 p-6">{children}</main>
 
         {/* Footer */}
         <UserFooter />

@@ -49,8 +49,8 @@ export default function UserHeader() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 h-16">
-      <div className="px-4 sm:px-6 lg:px-8 h-full">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-40 h-16">
+      <div className="px-6 h-full">
         <div className="flex justify-between items-center h-full">
           {/* Page Title Area */}
           <div className="flex-1">
@@ -84,7 +84,7 @@ export default function UserHeader() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-64" align="end" forceMount>
+              <DropdownMenuContent className="w-64 bg-white" align="end" forceMount>
                 <div className="flex items-center justify-start gap-3 p-3">
                   <Avatar className="h-12 w-12">
                     <AvatarImage
