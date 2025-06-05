@@ -1,4 +1,4 @@
-import type { SiteCreate, SiteRead, TaskResponse, TaskStatus } from "@/types/site"
+import type { SiteCreate, SiteRead, TaskResponse, TaskStatus, ScraperInfo } from "@/types/site"
 import { getAuthHeaders } from "@/lib/utils"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
@@ -87,6 +87,24 @@ export class SiteService {
       return await response.json()
     } catch (error) {
       console.error("Error uploading scraper:", error)
+      throw error
+    }
+  }
+
+  static async getAvailableScrapers(): Promise<ScraperInfo[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/sites/scrapers`, {
+        headers: getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao buscar scrapers disponíveis")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Error fetching available scrapers:", error)
       throw error
     }
   }

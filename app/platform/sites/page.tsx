@@ -38,8 +38,20 @@ import DashboardLayout from "@/components/dashboard-layout"
 export default function SitesPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth()
   const router = useRouter()
-  const { sites, loading, error, createSite, updateSite, uploadScraper, runScraper, getTaskStatus, fetchSites } =
-    useSites()
+  const {
+    sites,
+    availableScrapers,
+    loading,
+    scrapersLoading,
+    error,
+    createSite,
+    updateSite,
+    uploadScraper,
+    runScraper,
+    getTaskStatus,
+    fetchSites,
+    fetchAvailableScrapers,
+  } = useSites()
   const { toast } = useToast()
 
   // Form states
@@ -47,7 +59,6 @@ export default function SitesPage() {
   const [isEditMode, setIsEditMode] = useState(false)
   const [currentSiteId, setCurrentSiteId] = useState<number | null>(null)
   const [formData, setFormData] = useState<SiteCreate>({
-    name: "",
     links: [""],
     auth_type: AuthType.NONE,
     captcha_type: CaptchaType.NONE,
@@ -56,6 +67,7 @@ export default function SitesPage() {
   })
   const [scraperFile, setScraperFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploadingFile, setIsUploadingFile] = useState(false)
   const [runningTasks, setRunningTasks] = useState<Record<number, string>>({})
   const [refreshing, setRefreshing] = useState(false)
 
@@ -82,11 +94,10 @@ export default function SitesPage() {
 
   const resetForm = () => {
     setFormData({
-      name: "",
       links: [""],
       auth_type: AuthType.NONE,
       captcha_type: CaptchaType.NONE,
-      scraper: "generic",
+      scraper: availableScrapers.length > 0 ? availableScrapers[0].name : "generic",
       needs_js: false,
     })
     setScraperFile(null)
@@ -104,7 +115,6 @@ export default function SitesPage() {
 
   const handleOpenEditDialog = (site: SiteRead) => {
     setFormData({
-      name: site.name,
       links: [...site.links],
       auth_type: site.auth_type,
       captcha_type: site.captcha_type,
@@ -154,6 +164,7 @@ export default function SitesPage() {
       return
     }
 
+    setIsUploadingFile(true)
     try {
       const result = await uploadScraper(scraperFile)
       toast({
@@ -164,25 +175,21 @@ export default function SitesPage() {
       // Reset file input
       const fileInput = document.getElementById("scraper-file") as HTMLInputElement
       if (fileInput) fileInput.value = ""
+
+      // Atualiza a lista de scrapers disponíveis
+      await fetchAvailableScrapers()
     } catch (err) {
       toast({
         title: "Erro",
         description: err instanceof Error ? err.message : "Erro ao fazer upload",
         variant: "destructive",
       })
+    } finally {
+      setIsUploadingFile(false)
     }
   }
 
   const validateForm = () => {
-    if (!formData.name.trim()) {
-      toast({
-        title: "Erro de Validação",
-        description: "Nome do site é obrigatório",
-        variant: "destructive",
-      })
-      return false
-    }
-
     const validLinks = formData.links.filter((link) => link.trim() !== "")
     if (validLinks.length === 0) {
       toast({
@@ -309,6 +316,7 @@ export default function SitesPage() {
     setRefreshing(true)
     try {
       await fetchSites()
+      await fetchAvailableScrapers()
       toast({
         title: "Atualizado",
         description: "Lista de sites atualizada com sucesso",
@@ -386,20 +394,6 @@ export default function SitesPage() {
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Site Name */}
-              <div className="space-y-2">
-                <Label htmlFor="site-name" className="text-sm font-medium">
-                  Nome do Site
-                </Label>
-                <Input
-                  id="site-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ex: Facebook, LinkedIn, etc."
-                  className="w-full"
-                />
-              </div>
-
               <Tabs defaultValue="basic" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="basic">URLs</TabsTrigger>
@@ -440,15 +434,37 @@ export default function SitesPage() {
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="scraper" className="text-sm font-medium">
-                        Nome do Scraper
+                        Scraper
                       </Label>
-                      <Input
-                        id="scraper"
+                      <Select
                         value={formData.scraper}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, scraper: e.target.value }))}
-                        placeholder="generic"
-                        className="mt-2"
-                      />
+                        onValueChange={(value) => setFormData((prev) => ({ ...prev, scraper: value }))}
+                      >
+                        <SelectTrigger className="mt-2">
+                          <SelectValue placeholder="Selecione um scraper" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {scrapersLoading ? (
+                            <div className="flex items-center justify-center p-2">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              <span>Carregando scrapers...</span>
+                            </div>
+                          ) : availableScrapers.length > 0 ? (
+                            availableScrapers.map((scraper) => (
+                              <SelectItem key={scraper.name} value={scraper.name}>
+                                {scraper.name}
+                                {scraper.description && (
+                                  <span className="text-xs text-muted-foreground ml-2">- {scraper.description}</span>
+                                )}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-2 text-sm text-muted-foreground">
+                              Nenhum scraper disponível. Faça upload de um.
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
@@ -462,13 +478,25 @@ export default function SitesPage() {
                           accept=".py"
                           onChange={(e) => setScraperFile(e.target.files?.[0] || null)}
                           className="flex-1"
+                          disabled={isUploadingFile}
                         />
-                        <Button type="button" variant="outline" onClick={handleScraperUpload} disabled={!scraperFile}>
-                          <Upload className="h-4 w-4 mr-2" />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleScraperUpload}
+                          disabled={!scraperFile || isUploadingFile}
+                        >
+                          {isUploadingFile ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <Upload className="h-4 w-4 mr-2" />
+                          )}
                           Upload
                         </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">Apenas arquivos .py são aceitos</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Apenas arquivos .py são aceitos. O scraper deve registrar-se no registry.
+                      </p>
                     </div>
                   </div>
                 </TabsContent>
@@ -573,7 +601,6 @@ export default function SitesPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-16">ID</TableHead>
-                      <TableHead>Nome</TableHead>
                       <TableHead>URLs</TableHead>
                       <TableHead className="w-32">Scraper</TableHead>
                       <TableHead className="w-32">Autenticação</TableHead>
@@ -586,7 +613,6 @@ export default function SitesPage() {
                     {sites.map((site) => (
                       <TableRow key={site.id}>
                         <TableCell className="font-medium">{site.id}</TableCell>
-                        <TableCell className="font-medium">{site.name}</TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             {site.links.slice(0, 2).map((link, index) => (

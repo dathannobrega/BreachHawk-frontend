@@ -17,7 +17,6 @@ export interface SiteUrl {
 }
 
 export interface SiteCreate {
-  name: string
   links: string[]
   auth_type: AuthType
   captcha_type: CaptchaType
@@ -38,4 +37,9 @@ export interface TaskStatus {
   task_id: string
   status: string
   result?: any
+}
+
+export interface ScraperInfo {
+  name: string
+  description?: string
 }

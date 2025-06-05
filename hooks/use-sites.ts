@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { SiteService } from "@/services/site-service"
-import type { SiteCreate, SiteRead, TaskResponse, TaskStatus } from "@/types/site"
+import type { SiteCreate, SiteRead, TaskResponse, TaskStatus, ScraperInfo } from "@/types/site"
 
 export function useSites() {
   const [sites, setSites] = useState<SiteRead[]>([])
+  const [availableScrapers, setAvailableScrapers] = useState<ScraperInfo[]>([])
   const [loading, setLoading] = useState(true)
+  const [scrapersLoading, setScrapersLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchSites = async () => {
@@ -22,8 +24,23 @@ export function useSites() {
     }
   }
 
+  const fetchAvailableScrapers = async () => {
+    setScrapersLoading(true)
+    try {
+      const scrapers = await SiteService.getAvailableScrapers()
+      setAvailableScrapers(scrapers)
+      return scrapers
+    } catch (err) {
+      console.error("Error fetching scrapers:", err)
+      return []
+    } finally {
+      setScrapersLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchSites()
+    fetchAvailableScrapers()
   }, [])
 
   const createSite = async (site: SiteCreate): Promise<SiteRead> => {
@@ -48,7 +65,10 @@ export function useSites() {
 
   const uploadScraper = async (file: File): Promise<{ msg: string }> => {
     try {
-      return await SiteService.uploadScraper(file)
+      const result = await SiteService.uploadScraper(file)
+      // Atualiza a lista de scrapers disponíveis após o upload
+      await fetchAvailableScrapers()
+      return result
     } catch (err) {
       throw err
     }
@@ -72,9 +92,12 @@ export function useSites() {
 
   return {
     sites,
+    availableScrapers,
     loading,
+    scrapersLoading,
     error,
     fetchSites,
+    fetchAvailableScrapers,
     createSite,
     updateSite,
     uploadScraper,
