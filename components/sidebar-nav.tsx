@@ -17,9 +17,8 @@ import {
   X,
   FileText,
   Bell,
-  BarChart3,
-  Lock,
   CreditCard,
+  Lock,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useLanguage } from "@/contexts/language-context"
@@ -102,12 +101,6 @@ export default function SidebarNav() {
           description: "Domínios monitorados",
         },
         {
-          label: t.sidebar.analytics || "Analytics",
-          icon: BarChart3,
-          href: "/admin/analytics",
-          description: "Análises e métricas",
-        },
-        {
           label: t.sidebar.security || "Segurança",
           icon: Lock,
           href: "/admin/security",
@@ -143,10 +136,10 @@ export default function SidebarNav() {
           description: "Faturamento e pagamentos",
         },
         {
-          label: t.sidebar.analytics || "Analytics",
-          icon: BarChart3,
-          href: "/platform/analytics",
-          description: "Analytics da plataforma",
+          label: t.sidebar.sites || "Sites",
+          icon: Globe,
+          href: "/platform/sites",
+          description: "Gerenciar sites de scraping",
         },
       ]
     }
