@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +13,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Switch } from "@/components/ui/switch"
-import { Globe, Plus, Play, Upload, Loader2, CheckCircle, XCircle, Trash2, ExternalLink, RefreshCw } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  Globe,
+  Plus,
+  Play,
+  Upload,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Trash2,
+  ExternalLink,
+  RefreshCw,
+  AlertCircle,
+} from "lucide-react"
 import { useSites } from "@/hooks/use-sites"
 import { AuthType, CaptchaType, type SiteCreate } from "@/types/site"
 import { useToast } from "@/hooks/use-toast"
@@ -27,7 +48,7 @@ export default function SitesPage() {
   const { toast } = useToast()
 
   // Form states
-  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [formData, setFormData] = useState<SiteCreate>({
     links: [""],
     auth_type: AuthType.NONE,
@@ -41,8 +62,23 @@ export default function SitesPage() {
   const [refreshing, setRefreshing] = useState(false)
 
   // Verificar autenticação
-  if (!authLoading && (!isAuthenticated || user?.role !== "platform_admin")) {
-    router.push("/login")
+  useEffect(() => {
+    if (!authLoading && (!isAuthenticated || user?.role !== "platform_admin")) {
+      router.push("/login")
+    }
+  }, [isAuthenticated, authLoading, user, router])
+
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (!user || user.role !== "platform_admin") {
     return null
   }
 
@@ -54,10 +90,12 @@ export default function SitesPage() {
   }
 
   const removeUrlField = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      links: prev.links.filter((_, i) => i !== index),
-    }))
+    if (formData.links.length > 1) {
+      setFormData((prev) => ({
+        ...prev,
+        links: prev.links.filter((_, i) => i !== index),
+      }))
+    }
   }
 
   const updateUrl = (index: number, value: string) => {
@@ -84,6 +122,9 @@ export default function SitesPage() {
         description: result.msg,
       })
       setScraperFile(null)
+      // Reset file input
+      const fileInput = document.getElementById("scraper-file") as HTMLInputElement
+      if (fileInput) fileInput.value = ""
     } catch (err) {
       toast({
         title: "Erro",
@@ -93,22 +134,37 @@ export default function SitesPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Validações
+  const validateForm = () => {
     const validLinks = formData.links.filter((link) => link.trim() !== "")
     if (validLinks.length === 0) {
       toast({
-        title: "Erro",
-        description: "Adicione pelo menos uma URL",
+        title: "Erro de Validação",
+        description: "Adicione pelo menos uma URL válida",
         variant: "destructive",
       })
-      return
+      return false
     }
+
+    if (!formData.scraper.trim()) {
+      toast({
+        title: "Erro de Validação",
+        description: "Nome do scraper é obrigatório",
+        variant: "destructive",
+      })
+      return false
+    }
+
+    return true
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm()) return
 
     setIsSubmitting(true)
     try {
+      const validLinks = formData.links.filter((link) => link.trim() !== "")
       await createSite({
         ...formData,
         links: validLinks,
@@ -127,7 +183,8 @@ export default function SitesPage() {
         scraper: "generic",
         needs_js: false,
       })
-      setShowCreateForm(false)
+      setScraperFile(null)
+      setShowCreateDialog(false)
 
       // Refresh sites list
       await fetchSites()
@@ -177,12 +234,17 @@ export default function SitesPage() {
               description: "Falha na execução do scraping",
               variant: "destructive",
             })
-          } else {
+          } else if (status.status === "PENDING" || status.status === "STARTED") {
             // Continue polling
             setTimeout(pollStatus, 2000)
           }
         } catch (err) {
           console.error("Error polling task status:", err)
+          setRunningTasks((prev) => {
+            const newTasks = { ...prev }
+            delete newTasks[siteId]
+            return newTasks
+          })
         }
       }
 
@@ -216,24 +278,26 @@ export default function SitesPage() {
   }
 
   const getAuthTypeBadge = (authType: AuthType) => {
-    const variants = {
-      [AuthType.NONE]: "secondary",
-      [AuthType.BASIC]: "default",
-      [AuthType.FORM]: "outline",
-    } as const
+    const config = {
+      [AuthType.NONE]: { variant: "secondary" as const, label: "Nenhuma" },
+      [AuthType.BASIC]: { variant: "default" as const, label: "Básica" },
+      [AuthType.FORM]: { variant: "outline" as const, label: "Formulário" },
+    }
 
-    return <Badge variant={variants[authType]}>{authType}</Badge>
+    const { variant, label } = config[authType]
+    return <Badge variant={variant}>{label}</Badge>
   }
 
   const getCaptchaTypeBadge = (captchaType: CaptchaType) => {
-    const variants = {
-      [CaptchaType.NONE]: "secondary",
-      [CaptchaType.IMAGE]: "destructive",
-      [CaptchaType.MATH]: "default",
-      [CaptchaType.ROTATED]: "outline",
-    } as const
+    const config = {
+      [CaptchaType.NONE]: { variant: "secondary" as const, label: "Nenhum" },
+      [CaptchaType.IMAGE]: { variant: "destructive" as const, label: "Imagem" },
+      [CaptchaType.MATH]: { variant: "default" as const, label: "Matemático" },
+      [CaptchaType.ROTATED]: { variant: "outline" as const, label: "Rotacionado" },
+    }
 
-    return <Badge variant={variants[captchaType]}>{captchaType}</Badge>
+    const { variant, label } = config[captchaType]
+    return <Badge variant={variant}>{label}</Badge>
   }
 
   return (
@@ -249,150 +313,162 @@ export default function SitesPage() {
             <Button variant="outline" size="icon" onClick={handleRefresh} disabled={refreshing}>
               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             </Button>
-            <Button onClick={() => setShowCreateForm(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Site
-            </Button>
-          </div>
-        </div>
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Site
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Cadastrar Novo Site</DialogTitle>
+                  <DialogDescription>Configure um novo site para scraping</DialogDescription>
+                </DialogHeader>
 
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-2 text-destructive">
-                <XCircle className="h-4 w-4" />
-                <span>{error}</span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <Tabs defaultValue="basic" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="basic">Básico</TabsTrigger>
+                      <TabsTrigger value="scraper">Scraper</TabsTrigger>
+                      <TabsTrigger value="advanced">Avançado</TabsTrigger>
+                    </TabsList>
 
-        {showCreateForm && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Cadastrar Novo Site</CardTitle>
-              <CardDescription>Configure um novo site para scraping</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="basic">Configurações Básicas</TabsTrigger>
-                  <TabsTrigger value="scraper">Scraper</TabsTrigger>
-                  <TabsTrigger value="advanced">Avançado</TabsTrigger>
-                </TabsList>
+                    <TabsContent value="basic" className="space-y-4 pt-4">
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium">URLs do Site</Label>
+                          <div className="space-y-2 mt-2">
+                            {formData.links.map((url, index) => (
+                              <div key={index} className="flex gap-2">
+                                <Input
+                                  placeholder="https://exemplo.com"
+                                  value={url}
+                                  onChange={(e) => updateUrl(index, e.target.value)}
+                                  className="flex-1"
+                                />
+                                {formData.links.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => removeUrlField(index)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={addUrlField} className="w-full">
+                              <Plus className="h-4 w-4 mr-2" />
+                              Adicionar URL
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
 
-                <form onSubmit={handleSubmit}>
-                  <TabsContent value="basic" className="space-y-4 pt-4">
-                    <div className="space-y-4">
-                      <div>
-                        <Label>URLs do Site</Label>
-                        {formData.links.map((url, index) => (
-                          <div key={index} className="flex gap-2 mt-2">
+                    <TabsContent value="scraper" className="space-y-4 pt-4">
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="scraper" className="text-sm font-medium">
+                            Nome do Scraper
+                          </Label>
+                          <Input
+                            id="scraper"
+                            value={formData.scraper}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, scraper: e.target.value }))}
+                            placeholder="generic"
+                            className="mt-2"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="scraper-file" className="text-sm font-medium">
+                            Upload do Scraper Python
+                          </Label>
+                          <div className="flex gap-2 mt-2">
                             <Input
-                              placeholder="https://exemplo.com"
-                              value={url}
-                              onChange={(e) => updateUrl(index, e.target.value)}
+                              id="scraper-file"
+                              type="file"
+                              accept=".py"
+                              onChange={(e) => setScraperFile(e.target.files?.[0] || null)}
                               className="flex-1"
                             />
-                            {formData.links.length > 1 && (
-                              <Button type="button" variant="outline" size="icon" onClick={() => removeUrlField(index)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handleScraperUpload}
+                              disabled={!scraperFile}
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              Upload
+                            </Button>
                           </div>
-                        ))}
-                        <Button type="button" variant="outline" size="sm" onClick={addUrlField} className="mt-2">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar URL
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="scraper" className="space-y-4 pt-4">
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="scraper">Nome do Scraper</Label>
-                        <Input
-                          id="scraper"
-                          value={formData.scraper}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, scraper: e.target.value }))}
-                          placeholder="generic"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="scraper-file">Upload do Scraper Python</Label>
-                        <div className="flex gap-2 mt-2">
-                          <Input
-                            id="scraper-file"
-                            type="file"
-                            accept=".py"
-                            onChange={(e) => setScraperFile(e.target.files?.[0] || null)}
-                            className="flex-1"
-                          />
-                          <Button type="button" variant="outline" onClick={handleScraperUpload} disabled={!scraperFile}>
-                            <Upload className="h-4 w-4 mr-2" />
-                            Upload
-                          </Button>
+                          <p className="text-xs text-muted-foreground mt-1">Apenas arquivos .py são aceitos</p>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">Apenas arquivos .py são aceitos</p>
                       </div>
-                    </div>
-                  </TabsContent>
+                    </TabsContent>
 
-                  <TabsContent value="advanced" className="space-y-4 pt-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="auth-type">Tipo de Autenticação</Label>
-                        <Select
-                          value={formData.auth_type}
-                          onValueChange={(value: AuthType) => setFormData((prev) => ({ ...prev, auth_type: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={AuthType.NONE}>Nenhuma</SelectItem>
-                            <SelectItem value={AuthType.BASIC}>Básica</SelectItem>
-                            <SelectItem value={AuthType.FORM}>Formulário</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    <TabsContent value="advanced" className="space-y-4 pt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="auth-type" className="text-sm font-medium">
+                            Tipo de Autenticação
+                          </Label>
+                          <Select
+                            value={formData.auth_type}
+                            onValueChange={(value: AuthType) => setFormData((prev) => ({ ...prev, auth_type: value }))}
+                          >
+                            <SelectTrigger className="mt-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={AuthType.NONE}>Nenhuma</SelectItem>
+                              <SelectItem value={AuthType.BASIC}>Básica</SelectItem>
+                              <SelectItem value={AuthType.FORM}>Formulário</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="captcha-type" className="text-sm font-medium">
+                            Tipo de Captcha
+                          </Label>
+                          <Select
+                            value={formData.captcha_type}
+                            onValueChange={(value: CaptchaType) =>
+                              setFormData((prev) => ({ ...prev, captcha_type: value }))
+                            }
+                          >
+                            <SelectTrigger className="mt-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={CaptchaType.NONE}>Nenhum</SelectItem>
+                              <SelectItem value={CaptchaType.IMAGE}>Imagem</SelectItem>
+                              <SelectItem value={CaptchaType.MATH}>Matemático</SelectItem>
+                              <SelectItem value={CaptchaType.ROTATED}>Rotacionado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
-                      <div>
-                        <Label htmlFor="captcha-type">Tipo de Captcha</Label>
-                        <Select
-                          value={formData.captcha_type}
-                          onValueChange={(value: CaptchaType) =>
-                            setFormData((prev) => ({ ...prev, captcha_type: value }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={CaptchaType.NONE}>Nenhum</SelectItem>
-                            <SelectItem value={CaptchaType.IMAGE}>Imagem</SelectItem>
-                            <SelectItem value={CaptchaType.MATH}>Matemático</SelectItem>
-                            <SelectItem value={CaptchaType.ROTATED}>Rotacionado</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="needs-js"
+                          checked={formData.needs_js}
+                          onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, needs_js: checked }))}
+                        />
+                        <Label htmlFor="needs-js" className="text-sm font-medium">
+                          Requer JavaScript
+                        </Label>
                       </div>
-                    </div>
+                    </TabsContent>
+                  </Tabs>
 
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="needs-js"
-                        checked={formData.needs_js}
-                        onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, needs_js: checked }))}
-                      />
-                      <Label htmlFor="needs-js">Requer JavaScript</Label>
-                    </div>
-                  </TabsContent>
-
-                  <div className="flex justify-end space-x-2 mt-6">
-                    <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)}>
+                  <div className="flex justify-end space-x-2 pt-4 border-t">
+                    <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
                       Cancelar
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
@@ -401,11 +477,20 @@ export default function SitesPage() {
                     </Button>
                   </div>
                 </form>
-              </Tabs>
-            </CardContent>
-          </Card>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
+        {/* Sites Table */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -416,15 +501,15 @@ export default function SitesPage() {
           </CardHeader>
           <CardContent>
             {loading && sites.length === 0 ? (
-              <div className="flex justify-center items-center py-8">
+              <div className="flex justify-center items-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : sites.length === 0 ? (
-              <div className="text-center py-8">
+              <div className="text-center py-12">
                 <Globe className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">Nenhum site cadastrado</h3>
                 <p className="text-muted-foreground mb-4">Comece adicionando seu primeiro site para scraping</p>
-                <Button onClick={() => setShowCreateForm(true)}>
+                <Button onClick={() => setShowCreateDialog(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Cadastrar Site
                 </Button>
@@ -434,13 +519,13 @@ export default function SitesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
+                      <TableHead className="w-16">ID</TableHead>
                       <TableHead>URLs</TableHead>
-                      <TableHead>Scraper</TableHead>
-                      <TableHead>Autenticação</TableHead>
-                      <TableHead>Captcha</TableHead>
-                      <TableHead>JavaScript</TableHead>
-                      <TableHead>Ações</TableHead>
+                      <TableHead className="w-32">Scraper</TableHead>
+                      <TableHead className="w-32">Autenticação</TableHead>
+                      <TableHead className="w-32">Captcha</TableHead>
+                      <TableHead className="w-24 text-center">JavaScript</TableHead>
+                      <TableHead className="w-24 text-center">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -449,12 +534,17 @@ export default function SitesPage() {
                         <TableCell className="font-medium">{site.id}</TableCell>
                         <TableCell>
                           <div className="space-y-1">
-                            {site.links.map((link, index) => (
+                            {site.links.slice(0, 2).map((link, index) => (
                               <div key={index} className="flex items-center space-x-2">
-                                <ExternalLink className="h-3 w-3" />
-                                <span className="text-sm truncate max-w-[200px]">{link}</span>
+                                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-sm truncate max-w-[300px]" title={link}>
+                                  {link}
+                                </span>
                               </div>
                             ))}
+                            {site.links.length > 2 && (
+                              <div className="text-xs text-muted-foreground">+{site.links.length - 2} mais</div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -462,27 +552,27 @@ export default function SitesPage() {
                         </TableCell>
                         <TableCell>{getAuthTypeBadge(site.auth_type)}</TableCell>
                         <TableCell>{getCaptchaTypeBadge(site.captcha_type)}</TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           {site.needs_js ? (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
                           ) : (
-                            <XCircle className="h-4 w-4 text-gray-400" />
+                            <XCircle className="h-4 w-4 text-gray-400 mx-auto" />
                           )}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleRunScraper(site.id)}
-                              disabled={runningTasks[site.id] !== undefined}
-                            >
-                              {runningTasks[site.id] ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Play className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
+                        <TableCell className="text-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRunScraper(site.id)}
+                            disabled={runningTasks[site.id] !== undefined}
+                            className="h-8 w-8 p-0"
+                          >
+                            {runningTasks[site.id] ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Play className="h-4 w-4" />
+                            )}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

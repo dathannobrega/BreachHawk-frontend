@@ -7,7 +7,7 @@ export class SiteService {
   static async getSites(): Promise<SiteRead[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/sites/`, {
-        headers: await getAuthHeaders(),
+        headers: getAuthHeaders(),
       })
 
       if (!response.ok) {
@@ -27,7 +27,7 @@ export class SiteService {
       const response = await fetch(`${API_BASE_URL}/api/v1/sites/`, {
         method: "POST",
         headers: {
-          ...(await getAuthHeaders()),
+          ...getAuthHeaders(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify(site),
@@ -52,7 +52,7 @@ export class SiteService {
 
       const response = await fetch(`${API_BASE_URL}/api/v1/sites/upload-scraper`, {
         method: "POST",
-        headers: await getAuthHeaders(),
+        headers: getAuthHeaders(),
         body: formData,
       })
 
@@ -72,7 +72,7 @@ export class SiteService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/sites/${siteId}/run`, {
         method: "POST",
-        headers: await getAuthHeaders(),
+        headers: getAuthHeaders(),
       })
 
       if (!response.ok) {
@@ -90,7 +90,7 @@ export class SiteService {
   static async getTaskStatus(taskId: string): Promise<TaskStatus> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/sites/tasks/${taskId}`, {
-        headers: await getAuthHeaders(),
+        headers: getAuthHeaders(),
       })
 
       if (!response.ok) {
