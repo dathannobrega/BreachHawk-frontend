@@ -20,6 +20,8 @@ export default function UserHeader() {
 
   if (!user) return null
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+
   const getInitials = () => {
     if (user.first_name && user.last_name) {
       return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
@@ -46,6 +48,23 @@ export default function UserHeader() {
       default:
         return "Usuário"
     }
+  }
+
+  const getProfileImageSrc = (size = 40) => {
+    if (!user.profile_image) return `/placeholder.svg?height=${size}&width=${size}`
+
+    // Se for base64, usar diretamente
+    if (user.profile_image.startsWith("data:")) {
+      return user.profile_image
+    }
+
+    // Se for uma URL relativa do backend, construir URL completa
+    if (user.profile_image.startsWith("/static/")) {
+      return `${apiUrl}${user.profile_image}`
+    }
+
+    // Se for uma URL completa, usar diretamente
+    return user.profile_image
   }
 
   return (
@@ -76,10 +95,7 @@ export default function UserHeader() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage
-                      src={user.profile_image || "/placeholder.svg?height=40&width=40"}
-                      alt={getDisplayName()}
-                    />
+                    <AvatarImage src={getProfileImageSrc(40) || "/placeholder.svg"} alt={getDisplayName()} />
                     <AvatarFallback className="bg-blue-500 text-white">{getInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
@@ -87,10 +103,7 @@ export default function UserHeader() {
               <DropdownMenuContent className="w-64 bg-white" align="end" forceMount>
                 <div className="flex items-center justify-start gap-3 p-3">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage
-                      src={user.profile_image || "/placeholder.svg?height=48&width=48"}
-                      alt={getDisplayName()}
-                    />
+                    <AvatarImage src={getProfileImageSrc(48) || "/placeholder.svg"} alt={getDisplayName()} />
                     <AvatarFallback className="bg-blue-500 text-white">{getInitials()}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col space-y-1 leading-none">

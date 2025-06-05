@@ -14,14 +14,39 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { User, Lock, Bell, Upload, Shield, History, Camera } from "lucide-react"
+import {
+  User,
+  Lock,
+  Bell,
+  Upload,
+  Shield,
+  History,
+  Camera,
+  Trash2,
+  Monitor,
+  Smartphone,
+  Globe,
+  CheckCircle,
+  XCircle,
+} from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useLanguage } from "@/contexts/language-context"
+import { useAuthData } from "@/hooks/use-auth-data"
+import { authService } from "@/services/auth-service"
 import DashboardLayout from "@/components/dashboard-layout"
 
 export default function UserSettings() {
-  const { user, isAuthenticated, loading } = useAuth()
+  const { user, isAuthenticated, loading: authLoading, updateUser } = useAuth()
   const { t, language, setLanguage } = useLanguage()
+  const {
+    loginHistory,
+    sessions,
+    loading: dataLoading,
+    error: dataError,
+    refetch,
+    deleteSession,
+    uploadProfileImage,
+  } = useAuthData()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [activeTab, setActiveTab] = useState("profile")
@@ -65,33 +90,33 @@ export default function UserSettings() {
   })
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       router.push("/login")
     }
-  }, [isAuthenticated, loading, router])
+  }, [isAuthenticated, authLoading, router])
 
   useEffect(() => {
     if (user) {
       setProfileSettings({
         username: user.username || "",
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
+        firstName: user.first_name || "",
+        lastName: user.last_name || "",
         email: user.email || "",
-        profileImage: user.profileImage || "",
+        profileImage: user.profile_image || "",
         organization: user.organization || "",
         contact: user.contact || "",
         company: user.company || "",
-        jobTitle: user.jobTitle || "",
+        jobTitle: user.job_title || "",
         preferredLanguage: language,
       })
       setNotificationSettings((prev) => ({
         ...prev,
-        isSubscribed: user.isSubscribed ?? true,
+        isSubscribed: user.is_subscribed ?? true,
       }))
     }
   }, [user, language])
 
-  if (loading) {
+  if (authLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-screen">
@@ -126,42 +151,20 @@ export default function UserSettings() {
 
     setUploading(true)
     try {
-      // Converter para base64
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        const base64 = e.target?.result as string
+      // Usar o novo endpoint de upload
+      const updatedUser = await uploadProfileImage(file)
 
-        // Atualizar o perfil com a nova imagem
-        const response = await fetch(`${apiUrl}/api/v1/users/me`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
-          body: JSON.stringify({
-            profile_image: base64,
-          }),
-        })
+      // Atualizar o estado local
+      setProfileSettings((prev) => ({
+        ...prev,
+        profileImage: updatedUser.profile_image,
+      }))
 
-        if (!response.ok) {
-          throw new Error("Erro ao fazer upload da imagem")
-        }
+      // Atualizar o usuário no contexto
+      updateUser(updatedUser)
 
-        const updatedUser = await response.json()
-
-        // Atualizar o estado local
-        setProfileSettings((prev) => ({
-          ...prev,
-          profileImage: base64,
-        }))
-
-        // Atualizar o usuário no localStorage
-        localStorage.setItem("user", JSON.stringify(updatedUser))
-
-        setMessage("Imagem atualizada com sucesso!")
-        setTimeout(() => setMessage(""), 3000)
-      }
-      reader.readAsDataURL(file)
+      setMessage("Imagem atualizada com sucesso!")
+      setTimeout(() => setMessage(""), 3000)
     } catch (error) {
       setMessage("Erro ao fazer upload da imagem.")
     } finally {
@@ -197,7 +200,7 @@ export default function UserSettings() {
       }
 
       const updatedUser = await response.json()
-      localStorage.setItem("user", JSON.stringify(updatedUser))
+      updateUser(updatedUser)
 
       // Update language if changed
       if (profileSettings.preferredLanguage !== language) {
@@ -259,6 +262,14 @@ export default function UserSettings() {
     }
   }
 
+  const handleDeleteSession = async (sessionId: number) => {
+    const success = await deleteSession(sessionId)
+    if (success) {
+      setMessage("Sessão encerrada com sucesso!")
+      setTimeout(() => setMessage(""), 3000)
+    }
+  }
+
   const getInitials = () => {
     if (profileSettings.firstName && profileSettings.lastName) {
       return `${profileSettings.firstName[0]}${profileSettings.lastName[0]}`.toUpperCase()
@@ -269,9 +280,34 @@ export default function UserSettings() {
     return profileSettings.email.slice(0, 2).toUpperCase()
   }
 
+  const getProfileImageSrc = () => {
+    if (!profileSettings.profileImage) return "/placeholder.svg?height=96&width=96"
+
+    // Se for base64, usar diretamente
+    if (profileSettings.profileImage.startsWith("data:")) {
+      return profileSettings.profileImage
+    }
+
+    // Se for uma URL relativa do backend, construir URL completa
+    if (profileSettings.profileImage.startsWith("/static/")) {
+      return `${apiUrl}${profileSettings.profileImage}`
+    }
+
+    // Se for uma URL completa, usar diretamente
+    return profileSettings.profileImage
+  }
+
+  const getDeviceIcon = (userAgent?: string | null) => {
+    if (!userAgent) return Monitor
+    if (userAgent.includes("Mobile") || userAgent.includes("Android") || userAgent.includes("iPhone")) {
+      return Smartphone
+    }
+    return Monitor
+  }
+
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-6 bg-white min-h-screen">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Configurações</h1>
@@ -285,6 +321,12 @@ export default function UserSettings() {
             <AlertDescription className={message.includes("sucesso") ? "text-green-800" : "text-red-800"}>
               {message}
             </AlertDescription>
+          </Alert>
+        )}
+
+        {dataError && (
+          <Alert className="mb-6 border-yellow-200 bg-yellow-50">
+            <AlertDescription className="text-yellow-800">{dataError}</AlertDescription>
           </Alert>
         )}
 
@@ -321,10 +363,7 @@ export default function UserSettings() {
                   <div className="flex items-center gap-6">
                     <div className="relative">
                       <Avatar className="h-24 w-24">
-                        <AvatarImage
-                          src={profileSettings.profileImage || "/placeholder.svg?height=96&width=96"}
-                          alt="Profile"
-                        />
+                        <AvatarImage src={getProfileImageSrc() || "/placeholder.svg"} alt="Profile" />
                         <AvatarFallback className="bg-blue-500 text-white text-lg">{getInitials()}</AvatarFallback>
                       </Avatar>
                       <Button
@@ -587,13 +626,14 @@ export default function UserSettings() {
 
           {/* Security Settings */}
           <TabsContent value="security">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurações de Segurança</CardTitle>
-                <CardDescription>Gerencie a segurança da sua conta</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
+            <div className="space-y-6">
+              {/* Two Factor Authentication */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Autenticação de Dois Fatores</CardTitle>
+                  <CardDescription>Adicione uma camada extra de segurança à sua conta</CardDescription>
+                </CardHeader>
+                <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>Autenticação de Dois Fatores</Label>
@@ -606,34 +646,133 @@ export default function UserSettings() {
                       }
                     />
                   </div>
+                </CardContent>
+              </Card>
 
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-base">Sessões Ativas</Label>
-                      <p className="text-sm text-gray-500 mb-3">Gerencie onde você está logado</p>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div>
-                            <p className="font-medium">Sessão Atual</p>
-                            <p className="text-sm text-gray-500">Chrome • São Paulo, Brasil</p>
+              {/* Active Sessions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sessões Ativas</CardTitle>
+                  <CardDescription>Gerencie onde você está logado</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {dataLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {sessions.map((session) => {
+                        const { browser, os } = authService.parseUserAgent(session.user_agent)
+                        const DeviceIcon = getDeviceIcon(session.user_agent)
+
+                        return (
+                          <div key={session.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <DeviceIcon className="h-5 w-5 text-gray-500" />
+                              <div>
+                                <p className="font-medium">
+                                  {browser} • {os}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  <Globe className="h-3 w-3 inline mr-1" />
+                                  {authService.getLocationDisplay(session.location)}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  Última atividade:{" "}
+                                  {authService.formatTimeAgo(session.last_activity || session.created_at)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {session.is_active ? (
+                                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Ativa
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Inativa
+                                </Badge>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteSession(session.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <Badge variant="secondary">Ativa</Badge>
-                        </div>
-                      </div>
-                    </div>
+                        )
+                      })}
 
-                    <div>
-                      <Label className="text-base">Histórico de Login</Label>
-                      <p className="text-sm text-gray-500 mb-3">Veja quando e onde você fez login</p>
-                      <Button variant="outline" className="w-full">
-                        <History className="h-4 w-4 mr-2" />
-                        Ver Histórico Completo
-                      </Button>
+                      {sessions.length === 0 && (
+                        <p className="text-center text-gray-500 py-8">Nenhuma sessão ativa encontrada</p>
+                      )}
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Login History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Histórico de Login</CardTitle>
+                  <CardDescription>Veja quando e onde você fez login</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {dataLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {loginHistory.slice(0, 10).map((login) => {
+                        const { browser, os } = authService.parseUserAgent(login.user_agent)
+
+                        return (
+                          <div key={login.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              {login.success ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <XCircle className="h-4 w-4 text-red-500" />
+                              )}
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {login.success ? "Login realizado" : "Tentativa de login falhada"}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {browser} • {os} • {authService.getLocationDisplay(login.location)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-600">{authService.formatDateTime(login.timestamp)}</p>
+                              <p className="text-xs text-gray-400">{login.ip_address}</p>
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      {loginHistory.length === 0 && (
+                        <p className="text-center text-gray-500 py-8">Nenhum histórico de login encontrado</p>
+                      )}
+
+                      {loginHistory.length > 10 && (
+                        <Button variant="outline" className="w-full mt-4" onClick={refetch}>
+                          <History className="h-4 w-4 mr-2" />
+                          Ver Histórico Completo
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
