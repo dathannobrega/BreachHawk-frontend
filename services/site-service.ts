@@ -1,168 +1,96 @@
-import type { SiteFormData, SiteListResponse, SiteResponse } from "@/types/site"
+import type { SiteCreate, SiteRead, TaskResponse, TaskStatus, UploadScraperResponse } from "@/types/site"
 
-export class SiteService {
-  private apiUrl: string
-  private token: string | null
+class SiteService {
+  private baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
-  constructor() {
-    this.apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
-    this.token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-  }
-
-  private getHeaders(isMultipart = false) {
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${this.token}`,
-    }
-
-    if (!isMultipart) {
-      headers["Content-Type"] = "application/json"
-    }
-
-    return headers
-  }
-
-  async getSites(page = 1, size = 10): Promise<SiteListResponse> {
-    try {
-      const response = await fetch(`${this.apiUrl}/api/v1/sites/?page=${page}&size=${size}`, {
-        headers: this.getHeaders(),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao buscar sites")
-      }
-
-      return await response.json()
-    } catch (error: any) {
-      console.error("Erro ao buscar sites:", error)
-      throw error
+  private getAuthHeaders() {
+    const token = localStorage.getItem("access_token")
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     }
   }
 
-  async getSite(id: number): Promise<SiteResponse> {
-    try {
-      const response = await fetch(`${this.apiUrl}/api/v1/sites/${id}`, {
-        headers: this.getHeaders(),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao buscar site")
-      }
-
-      return await response.json()
-    } catch (error: any) {
-      console.error(`Erro ao buscar site ${id}:`, error)
-      throw error
+  private getAuthHeadersForUpload() {
+    const token = localStorage.getItem("access_token")
+    return {
+      Authorization: `Bearer ${token}`,
     }
   }
 
-  async createSite(siteData: SiteFormData): Promise<SiteResponse> {
-    try {
-      const formData = new FormData()
-      formData.append("name", siteData.name)
-      formData.append("scraper_name", siteData.scraper_name)
-      formData.append("enabled", String(siteData.enabled))
-      formData.append("auth_type", siteData.auth_type)
-      formData.append("captcha_type", siteData.captcha_type)
-      formData.append("needs_js", String(siteData.needs_js))
+  async uploadScraper(file: File): Promise<UploadScraperResponse> {
+    const formData = new FormData()
+    formData.append("file", file)
 
-      // Adicionar URLs como JSON string
-      formData.append("urls", JSON.stringify(siteData.urls))
+    const response = await fetch(`${this.baseUrl}/api/v1/sites/upload-scraper`, {
+      method: "POST",
+      headers: this.getAuthHeadersForUpload(),
+      body: formData,
+    })
 
-      // Adicionar arquivo do scraper se existir
-      if (siteData.scraper_file) {
-        formData.append("scraper_file", siteData.scraper_file)
-      }
-
-      const response = await fetch(`${this.apiUrl}/api/v1/sites/`, {
-        method: "POST",
-        headers: this.getHeaders(true),
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao criar site")
-      }
-
-      return await response.json()
-    } catch (error: any) {
-      console.error("Erro ao criar site:", error)
-      throw error
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao fazer upload do scraper")
     }
+
+    return response.json()
   }
 
-  async updateSite(id: number, siteData: SiteFormData): Promise<SiteResponse> {
-    try {
-      const formData = new FormData()
-      formData.append("name", siteData.name)
-      formData.append("scraper_name", siteData.scraper_name)
-      formData.append("enabled", String(siteData.enabled))
-      formData.append("auth_type", siteData.auth_type)
-      formData.append("captcha_type", siteData.captcha_type)
-      formData.append("needs_js", String(siteData.needs_js))
+  async createSite(siteData: SiteCreate): Promise<SiteRead> {
+    const response = await fetch(`${this.baseUrl}/api/v1/sites/`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(siteData),
+    })
 
-      // Adicionar URLs como JSON string
-      formData.append("urls", JSON.stringify(siteData.urls))
-
-      // Adicionar arquivo do scraper se existir
-      if (siteData.scraper_file) {
-        formData.append("scraper_file", siteData.scraper_file)
-      }
-
-      const response = await fetch(`${this.apiUrl}/api/v1/sites/${id}`, {
-        method: "PUT",
-        headers: this.getHeaders(true),
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao atualizar site")
-      }
-
-      return await response.json()
-    } catch (error: any) {
-      console.error(`Erro ao atualizar site ${id}:`, error)
-      throw error
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao criar site")
     }
+
+    return response.json()
   }
 
-  async deleteSite(id: number): Promise<void> {
-    try {
-      const response = await fetch(`${this.apiUrl}/api/v1/sites/${id}`, {
-        method: "DELETE",
-        headers: this.getHeaders(),
-      })
+  async listSites(): Promise<SiteRead[]> {
+    const response = await fetch(`${this.baseUrl}/api/v1/sites/`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao excluir site")
-      }
-    } catch (error: any) {
-      console.error(`Erro ao excluir site ${id}:`, error)
-      throw error
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao listar sites")
     }
+
+    return response.json()
   }
 
-  async runScraper(id: number): Promise<{ task_id: string }> {
-    try {
-      const response = await fetch(`${this.apiUrl}/api/v1/sites/${id}/run`, {
-        method: "POST",
-        headers: this.getHeaders(),
-      })
+  async runScraper(siteId: number): Promise<TaskResponse> {
+    const response = await fetch(`${this.baseUrl}/api/v1/sites/${siteId}/run`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+    })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao executar scraper")
-      }
-
-      return await response.json()
-    } catch (error: any) {
-      console.error(`Erro ao executar scraper para o site ${id}:`, error)
-      throw error
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao executar scraper")
     }
+
+    return response.json()
+  }
+
+  async getTaskStatus(taskId: string): Promise<TaskStatus> {
+    const response = await fetch(`${this.baseUrl}/api/v1/sites/tasks/${taskId}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao obter status da task")
+    }
+
+    return response.json()
   }
 }
 

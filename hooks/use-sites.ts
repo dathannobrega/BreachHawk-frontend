@@ -2,112 +2,84 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { siteService } from "@/services/site-service"
-import type { SiteFormData, SiteResponse } from "@/types/site"
+import type { SiteCreate, SiteRead } from "@/types/site"
 
 export function useSites() {
-  const [sites, setSites] = useState<SiteResponse[]>([])
-  const [loading, setLoading] = useState(true)
+  const [sites, setSites] = useState<SiteRead[]>([])
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [totalItems, setTotalItems] = useState(0)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const [totalPages, setTotalPages] = useState(1)
 
-  const fetchSites = useCallback(async (page = 1, size = 10) => {
-    setLoading(true)
-    setError(null)
+  const fetchSites = useCallback(async () => {
     try {
-      const response = await siteService.getSites(page, size)
-      setSites(response.items)
-      setTotalItems(response.total)
-      setCurrentPage(response.page)
-      setPageSize(response.size)
-      setTotalPages(response.pages)
-    } catch (err: any) {
-      setError(err.message || "Erro ao carregar sites")
+      setLoading(true)
+      setError(null)
+      const data = await siteService.listSites()
+      setSites(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro desconhecido")
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => {
-    fetchSites(currentPage, pageSize)
-  }, [fetchSites, currentPage, pageSize])
-
-  const getSite = async (id: number) => {
+  const createSite = useCallback(async (siteData: SiteCreate) => {
     try {
-      return await siteService.getSite(id)
-    } catch (err: any) {
-      setError(err.message || `Erro ao carregar site ${id}`)
-      throw err
-    }
-  }
-
-  const createSite = async (siteData: SiteFormData) => {
-    try {
+      setError(null)
       const newSite = await siteService.createSite(siteData)
-      await fetchSites(currentPage, pageSize)
+      setSites((prev) => [...prev, newSite])
       return newSite
-    } catch (err: any) {
-      setError(err.message || "Erro ao criar site")
-      throw err
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Erro ao criar site"
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }
+  }, [])
 
-  const updateSite = async (id: number, siteData: SiteFormData) => {
+  const uploadScraper = useCallback(async (file: File) => {
     try {
-      const updatedSite = await siteService.updateSite(id, siteData)
-      await fetchSites(currentPage, pageSize)
-      return updatedSite
-    } catch (err: any) {
-      setError(err.message || `Erro ao atualizar site ${id}`)
-      throw err
+      setError(null)
+      return await siteService.uploadScraper(file)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Erro ao fazer upload do scraper"
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }
+  }, [])
 
-  const deleteSite = async (id: number) => {
+  const runScraper = useCallback(async (siteId: number) => {
     try {
-      await siteService.deleteSite(id)
-      await fetchSites(currentPage, pageSize)
-    } catch (err: any) {
-      setError(err.message || `Erro ao excluir site ${id}`)
-      throw err
+      setError(null)
+      return await siteService.runScraper(siteId)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Erro ao executar scraper"
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }
+  }, [])
 
-  const runScraper = async (id: number) => {
+  const getTaskStatus = useCallback(async (taskId: string) => {
     try {
-      return await siteService.runScraper(id)
-    } catch (err: any) {
-      setError(err.message || `Erro ao executar scraper para o site ${id}`)
-      throw err
+      setError(null)
+      return await siteService.getTaskStatus(taskId)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Erro ao obter status da task"
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }
+  }, [])
 
-  const changePage = (page: number) => {
-    setCurrentPage(page)
-  }
-
-  const changePageSize = (size: number) => {
-    setPageSize(size)
-    setCurrentPage(1)
-  }
+  useEffect(() => {
+    fetchSites()
+  }, [fetchSites])
 
   return {
     sites,
     loading,
     error,
-    totalItems,
-    currentPage,
-    pageSize,
-    totalPages,
     fetchSites,
-    getSite,
     createSite,
-    updateSite,
-    deleteSite,
+    uploadScraper,
     runScraper,
-    changePage,
-    changePageSize,
+    getTaskStatus,
   }
 }
