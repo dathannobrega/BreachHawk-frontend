@@ -1,4 +1,5 @@
 "use client"
+
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,8 +21,8 @@ export default function UserHeader() {
   if (!user) return null
 
   const getInitials = () => {
-    if (user.firstName && user.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+    if (user.first_name && user.last_name) {
+      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
     }
     if (user.username) {
       return user.username.slice(0, 2).toUpperCase()
@@ -30,8 +31,8 @@ export default function UserHeader() {
   }
 
   const getDisplayName = () => {
-    if (user.firstName && user.lastName) {
-      return `${user.firstName} ${user.lastName}`
+    if (user.first_name && user.last_name) {
+      return `${user.first_name} ${user.last_name}`
     }
     return user.username || user.email
   }
@@ -48,9 +49,9 @@ export default function UserHeader() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 h-16">
+      <div className="px-4 sm:px-6 lg:px-8 h-full">
+        <div className="flex justify-between items-center h-full">
           {/* Page Title Area */}
           <div className="flex-1">
             <h1 className="text-xl font-semibold text-gray-900">{/* Título será definido por cada página */}</h1>
@@ -76,7 +77,7 @@ export default function UserHeader() {
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
                     <AvatarImage
-                      src={user.profileImage || "/placeholder.svg?height=40&width=40"}
+                      src={user.profile_image || "/placeholder.svg?height=40&width=40"}
                       alt={getDisplayName()}
                     />
                     <AvatarFallback className="bg-blue-500 text-white">{getInitials()}</AvatarFallback>
@@ -87,7 +88,7 @@ export default function UserHeader() {
                 <div className="flex items-center justify-start gap-3 p-3">
                   <Avatar className="h-12 w-12">
                     <AvatarImage
-                      src={user.profileImage || "/placeholder.svg?height=48&width=48"}
+                      src={user.profile_image || "/placeholder.svg?height=48&width=48"}
                       alt={getDisplayName()}
                     />
                     <AvatarFallback className="bg-blue-500 text-white">{getInitials()}</AvatarFallback>

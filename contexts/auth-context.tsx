@@ -3,20 +3,20 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 
-// Atualizar a interface User para incluir todos os campos do backend
+// Atualizar a interface User para corresponder exatamente à resposta do backend
 interface User {
-  id: string
+  id: number
   username: string
   email: string
-  firstName?: string
-  lastName?: string
+  first_name?: string
+  last_name?: string
   role: "admin" | "user" | "platform_admin"
-  profileImage?: string
+  profile_image?: string
   organization?: string
   contact?: string
   company?: string
-  jobTitle?: string
-  isSubscribed?: boolean
+  job_title?: string
+  is_subscribed?: boolean
 }
 
 interface AuthContextType {
@@ -26,6 +26,7 @@ interface AuthContextType {
   loginWithToken: (data: { token: string; user: User }) => void
   logout: () => void
   register: (data: any) => Promise<void>
+  updateUser: (userData: User) => void
   loading: boolean
   isAuthenticated: boolean
 }
@@ -38,43 +39,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  // Usa a URL da API do ambiente ou, se estiver em produção, ajusta para usar a mesma origem
+  // Usa a URL da API do ambiente
   const apiUrl =
     process.env.NEXT_PUBLIC_API_BASE_URL ||
     (typeof window !== "undefined" && window.location.hostname === "www.protexion.cloud"
       ? "https://www.protexion.cloud/api"
       : "https://dev.protexion.cloud")
 
-  // No useEffect, atualizar para buscar dados atuais do usuário
   useEffect(() => {
-    const fetchCurrentUser = async () => {
+    const initializeAuth = async () => {
       const savedToken = localStorage.getItem("access_token")
-      if (savedToken) {
+      const savedUser = localStorage.getItem("user")
+
+      if (savedToken && savedUser) {
         try {
-          const response = await fetch(`${apiUrl}/api/v1/users/me`, {
+          // Primeiro, tenta usar os dados salvos
+          const userData = JSON.parse(savedUser)
+          setToken(savedToken)
+          setUser(userData)
+
+          // Depois, tenta validar o token fazendo uma requisição simples
+          // Como /users/me não existe, vamos tentar uma rota que sabemos que existe
+          const response = await fetch(`${apiUrl}/api/v1/auth/validate-token`, {
+            method: "POST",
             headers: {
               Authorization: `Bearer ${savedToken}`,
+              "Content-Type": "application/json",
             },
           })
-          if (response.ok) {
-            const userData = await response.json()
-            setToken(savedToken)
-            setUser(userData)
-            localStorage.setItem("user", JSON.stringify(userData))
-          } else {
-            // Token inválido, limpar dados
+
+          // Se a validação falhar, limpa os dados
+          if (!response.ok) {
+            console.log("Token inválido, limpando dados de autenticação")
             localStorage.removeItem("access_token")
             localStorage.removeItem("user")
+            setToken(null)
+            setUser(null)
           }
         } catch (error) {
-          console.error("Erro ao buscar usuário:", error)
+          console.error("Erro ao validar token:", error)
+          // Em caso de erro, mantém os dados salvos para funcionar offline
         }
       }
       setLoading(false)
     }
 
-    fetchCurrentUser()
-  }, [])
+    initializeAuth()
+  }, [apiUrl])
 
   const login = async (credentials: { username: string; password: string }) => {
     try {
@@ -117,6 +128,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user)
     localStorage.setItem("access_token", data.token)
     localStorage.setItem("user", JSON.stringify(data.user))
+  }
+
+  const updateUser = (userData: User) => {
+    setUser(userData)
+    localStorage.setItem("user", JSON.stringify(userData))
   }
 
   const register = async (data: any) => {
@@ -163,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loginWithToken,
     logout,
     register,
+    updateUser,
     loading,
     isAuthenticated: !!user && !!token,
   }
