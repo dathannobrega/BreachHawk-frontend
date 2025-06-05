@@ -2,11 +2,19 @@
 
 import { useState, useEffect } from "react"
 import { SiteService } from "@/services/site-service"
-import type { SiteCreate, SiteRead, TaskResponse, TaskStatus, ScraperInfo } from "@/types/site"
+import type {
+  SiteCreate,
+  SiteRead,
+  SiteUpdate,
+  TaskResponse,
+  TaskStatus,
+  ScrapeLogRead,
+  ScraperUploadResponse,
+} from "@/types/site"
 
 export function useSites() {
   const [sites, setSites] = useState<SiteRead[]>([])
-  const [availableScrapers, setAvailableScrapers] = useState<ScraperInfo[]>([])
+  const [availableScrapers, setAvailableScrapers] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [scrapersLoading, setScrapersLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -53,7 +61,7 @@ export function useSites() {
     }
   }
 
-  const updateSite = async (id: number, site: SiteCreate): Promise<SiteRead> => {
+  const updateSite = async (id: number, site: SiteUpdate): Promise<SiteRead> => {
     try {
       const updatedSite = await SiteService.updateSite(id, site)
       setSites((prev) => prev.map((s) => (s.id === id ? updatedSite : s)))
@@ -63,12 +71,30 @@ export function useSites() {
     }
   }
 
-  const uploadScraper = async (file: File): Promise<{ msg: string }> => {
+  const deleteSite = async (id: number): Promise<void> => {
+    try {
+      await SiteService.deleteSite(id)
+      setSites((prev) => prev.filter((s) => s.id !== id))
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const uploadScraper = async (file: File): Promise<ScraperUploadResponse> => {
     try {
       const result = await SiteService.uploadScraper(file)
       // Atualiza a lista de scrapers disponíveis após o upload
       await fetchAvailableScrapers()
       return result
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const deleteScraper = async (slug: string): Promise<void> => {
+    try {
+      await SiteService.deleteScraper(slug)
+      setAvailableScrapers((prev) => prev.filter((s) => s !== slug))
     } catch (err) {
       throw err
     }
@@ -90,6 +116,14 @@ export function useSites() {
     }
   }
 
+  const getSiteLogs = async (siteId: number): Promise<ScrapeLogRead[]> => {
+    try {
+      return await SiteService.getSiteLogs(siteId)
+    } catch (err) {
+      throw err
+    }
+  }
+
   return {
     sites,
     availableScrapers,
@@ -100,8 +134,11 @@ export function useSites() {
     fetchAvailableScrapers,
     createSite,
     updateSite,
+    deleteSite,
     uploadScraper,
+    deleteScraper,
     runScraper,
     getTaskStatus,
+    getSiteLogs,
   }
 }

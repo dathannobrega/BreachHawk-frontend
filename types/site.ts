@@ -11,12 +11,8 @@ export enum CaptchaType {
   ROTATED = "rotated",
 }
 
-export interface SiteUrl {
-  url: string
-  is_primary?: boolean
-}
-
 export interface SiteCreate {
+  name: string
   links: string[]
   auth_type: AuthType
   captcha_type: CaptchaType
@@ -26,6 +22,15 @@ export interface SiteCreate {
 
 export interface SiteRead extends SiteCreate {
   id: number
+}
+
+export interface SiteUpdate {
+  name?: string
+  links?: string[]
+  auth_type?: AuthType
+  captcha_type?: CaptchaType
+  scraper?: string
+  needs_js?: boolean
 }
 
 export interface TaskResponse {
@@ -39,7 +44,16 @@ export interface TaskStatus {
   result?: any
 }
 
-export interface ScraperInfo {
-  name: string
-  description?: string
+export interface ScrapeLogRead {
+  id: number
+  site_id: number
+  url: string
+  success: boolean
+  message: string | null
+  created_at: string
+}
+
+export interface ScraperUploadResponse {
+  msg: string
+  slug: string
 }

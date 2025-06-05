@@ -16,6 +16,23 @@ import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Globe,
   Plus,
   Play,
@@ -28,12 +45,16 @@ import {
   RefreshCw,
   AlertCircle,
   Edit,
+  MoreHorizontal,
+  FileText,
+  Settings,
 } from "lucide-react"
 import { useSites } from "@/hooks/use-sites"
 import { AuthType, CaptchaType, type SiteCreate, type SiteRead } from "@/types/site"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import DashboardLayout from "@/components/dashboard-layout"
+import { SiteLogsDialog } from "@/components/site-logs-dialog"
 
 export default function SitesPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth()
@@ -46,7 +67,9 @@ export default function SitesPage() {
     error,
     createSite,
     updateSite,
+    deleteSite,
     uploadScraper,
+    deleteScraper,
     runScraper,
     getTaskStatus,
     fetchSites,
@@ -59,6 +82,7 @@ export default function SitesPage() {
   const [isEditMode, setIsEditMode] = useState(false)
   const [currentSiteId, setCurrentSiteId] = useState<number | null>(null)
   const [formData, setFormData] = useState<SiteCreate>({
+    name: "",
     links: [""],
     auth_type: AuthType.NONE,
     captcha_type: CaptchaType.NONE,
@@ -70,6 +94,20 @@ export default function SitesPage() {
   const [isUploadingFile, setIsUploadingFile] = useState(false)
   const [runningTasks, setRunningTasks] = useState<Record<number, string>>({})
   const [refreshing, setRefreshing] = useState(false)
+
+  // Delete confirmation states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [siteToDelete, setSiteToDelete] = useState<SiteRead | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Logs dialog states
+  const [showLogsDialog, setShowLogsDialog] = useState(false)
+  const [logsForSite, setLogsForSite] = useState<{ id: number; name: string } | null>(null)
+
+  // Scraper management states
+  const [showScraperDeleteDialog, setShowScraperDeleteDialog] = useState(false)
+  const [scraperToDelete, setScraperToDelete] = useState<string | null>(null)
+  const [isDeletingScraper, setIsDeletingScraper] = useState(false)
 
   // Verificar autenticação
   useEffect(() => {
@@ -94,10 +132,11 @@ export default function SitesPage() {
 
   const resetForm = () => {
     setFormData({
+      name: "",
       links: [""],
       auth_type: AuthType.NONE,
       captcha_type: CaptchaType.NONE,
-      scraper: availableScrapers.length > 0 ? availableScrapers[0].name : "generic",
+      scraper: availableScrapers.length > 0 ? availableScrapers[0] : "generic",
       needs_js: false,
     })
     setScraperFile(null)
@@ -115,6 +154,7 @@ export default function SitesPage() {
 
   const handleOpenEditDialog = (site: SiteRead) => {
     setFormData({
+      name: site.name,
       links: [...site.links],
       auth_type: site.auth_type,
       captcha_type: site.captcha_type,
@@ -129,6 +169,67 @@ export default function SitesPage() {
   const handleCloseDialog = () => {
     setShowSiteDialog(false)
     setTimeout(resetForm, 300) // Reset after dialog animation
+  }
+
+  const handleDeleteSite = (site: SiteRead) => {
+    setSiteToDelete(site)
+    setShowDeleteDialog(true)
+  }
+
+  const confirmDeleteSite = async () => {
+    if (!siteToDelete) return
+
+    setIsDeleting(true)
+    try {
+      await deleteSite(siteToDelete.id)
+      toast({
+        title: "Sucesso",
+        description: "Site excluído com sucesso!",
+      })
+      setShowDeleteDialog(false)
+      setSiteToDelete(null)
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Erro ao excluir site",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleShowLogs = (site: SiteRead) => {
+    setLogsForSite({ id: site.id, name: site.name })
+    setShowLogsDialog(true)
+  }
+
+  const handleDeleteScraper = (slug: string) => {
+    setScraperToDelete(slug)
+    setShowScraperDeleteDialog(true)
+  }
+
+  const confirmDeleteScraper = async () => {
+    if (!scraperToDelete) return
+
+    setIsDeletingScraper(true)
+    try {
+      await deleteScraper(scraperToDelete)
+      toast({
+        title: "Sucesso",
+        description: "Scraper excluído com sucesso!",
+      })
+      setShowScraperDeleteDialog(false)
+      setScraperToDelete(null)
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Erro ao excluir scraper",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeletingScraper(false)
+    }
   }
 
   const addUrlField = () => {
@@ -169,7 +270,7 @@ export default function SitesPage() {
       const result = await uploadScraper(scraperFile)
       toast({
         title: "Sucesso",
-        description: result.msg,
+        description: `${result.msg} - Slug: ${result.slug}`,
       })
       setScraperFile(null)
       // Reset file input
@@ -190,6 +291,15 @@ export default function SitesPage() {
   }
 
   const validateForm = () => {
+    if (!formData.name.trim()) {
+      toast({
+        title: "Erro de Validação",
+        description: "Nome do site é obrigatório",
+        variant: "destructive",
+      })
+      return false
+    }
+
     const validLinks = formData.links.filter((link) => link.trim() !== "")
     if (validLinks.length === 0) {
       toast({
@@ -383,6 +493,67 @@ export default function SitesPage() {
           </Alert>
         )}
 
+        {/* Scrapers Management Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Scrapers Disponíveis
+            </CardTitle>
+            <CardDescription>Gerencie os scrapers personalizados do sistema</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {scrapersLoading ? (
+                  <div className="flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-muted-foreground">Carregando scrapers...</span>
+                  </div>
+                ) : availableScrapers.length > 0 ? (
+                  availableScrapers.map((scraper) => (
+                    <div key={scraper} className="flex items-center gap-1">
+                      <Badge variant="outline">{scraper}</Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => handleDeleteScraper(scraper)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-sm text-muted-foreground">Nenhum scraper disponível</span>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  id="scraper-file"
+                  type="file"
+                  accept=".py"
+                  onChange={(e) => setScraperFile(e.target.files?.[0] || null)}
+                  className="flex-1"
+                  disabled={isUploadingFile}
+                />
+                <Button variant="outline" onClick={handleScraperUpload} disabled={!scraperFile || isUploadingFile}>
+                  {isUploadingFile ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  Upload Scraper
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Apenas arquivos .py são aceitos. O scraper deve registrar-se no registry.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Site Form Dialog */}
         <Dialog open={showSiteDialog} onOpenChange={(open) => !open && handleCloseDialog()}>
           <DialogContent className="sm:max-w-[600px] bg-background">
@@ -394,6 +565,20 @@ export default function SitesPage() {
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Site Name */}
+              <div className="space-y-2">
+                <Label htmlFor="site-name" className="text-sm font-medium">
+                  Nome do Site
+                </Label>
+                <Input
+                  id="site-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Ex: Facebook, LinkedIn, etc."
+                  className="w-full"
+                />
+              </div>
+
               <Tabs defaultValue="basic" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="basic">URLs</TabsTrigger>
@@ -451,11 +636,8 @@ export default function SitesPage() {
                             </div>
                           ) : availableScrapers.length > 0 ? (
                             availableScrapers.map((scraper) => (
-                              <SelectItem key={scraper.name} value={scraper.name}>
-                                {scraper.name}
-                                {scraper.description && (
-                                  <span className="text-xs text-muted-foreground ml-2">- {scraper.description}</span>
-                                )}
+                              <SelectItem key={scraper} value={scraper}>
+                                {scraper}
                               </SelectItem>
                             ))
                           ) : (
@@ -465,38 +647,6 @@ export default function SitesPage() {
                           )}
                         </SelectContent>
                       </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="scraper-file" className="text-sm font-medium">
-                        Upload do Scraper Python
-                      </Label>
-                      <div className="flex gap-2 mt-2">
-                        <Input
-                          id="scraper-file"
-                          type="file"
-                          accept=".py"
-                          onChange={(e) => setScraperFile(e.target.files?.[0] || null)}
-                          className="flex-1"
-                          disabled={isUploadingFile}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleScraperUpload}
-                          disabled={!scraperFile || isUploadingFile}
-                        >
-                          {isUploadingFile ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <Upload className="h-4 w-4 mr-2" />
-                          )}
-                          Upload
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Apenas arquivos .py são aceitos. O scraper deve registrar-se no registry.
-                      </p>
                     </div>
                   </div>
                 </TabsContent>
@@ -571,6 +721,60 @@ export default function SitesPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Delete Site Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir o site "{siteToDelete?.name}"? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteSite}
+                disabled={isDeleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Scraper Confirmation Dialog */}
+        <AlertDialog open={showScraperDeleteDialog} onOpenChange={setShowScraperDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Exclusão do Scraper</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir o scraper "{scraperToDelete}"? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteScraper}
+                disabled={isDeletingScraper}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeletingScraper && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Site Logs Dialog */}
+        <SiteLogsDialog
+          siteId={logsForSite?.id || null}
+          siteName={logsForSite?.name || ""}
+          open={showLogsDialog}
+          onOpenChange={setShowLogsDialog}
+        />
+
         {/* Sites Table */}
         <Card>
           <CardHeader>
@@ -601,6 +805,7 @@ export default function SitesPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-16">ID</TableHead>
+                      <TableHead>Nome</TableHead>
                       <TableHead>URLs</TableHead>
                       <TableHead className="w-32">Scraper</TableHead>
                       <TableHead className="w-32">Autenticação</TableHead>
@@ -613,6 +818,7 @@ export default function SitesPage() {
                     {sites.map((site) => (
                       <TableRow key={site.id}>
                         <TableCell className="font-medium">{site.id}</TableCell>
+                        <TableCell className="font-medium">{site.name}</TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             {site.links.slice(0, 2).map((link, index) => (
@@ -641,28 +847,40 @@ export default function SitesPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <div className="flex justify-center space-x-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleOpenEditDialog(site)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleRunScraper(site.id)}
-                              disabled={runningTasks[site.id] !== undefined}
-                              className="h-8 w-8 p-0"
-                            >
-                              {runningTasks[site.id] ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Play className="h-4 w-4" />
-                              )}
-                            </Button>
+                          <div className="flex justify-center">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleOpenEditDialog(site)}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleShowLogs(site)}>
+                                  <FileText className="h-4 w-4 mr-2" />
+                                  Ver Logs
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleRunScraper(site.id)}
+                                  disabled={runningTasks[site.id] !== undefined}
+                                >
+                                  {runningTasks[site.id] ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Play className="h-4 w-4 mr-2" />
+                                  )}
+                                  Executar
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleDeleteSite(site)} className="text-destructive">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
