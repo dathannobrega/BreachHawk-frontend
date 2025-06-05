@@ -11,6 +11,11 @@ export enum CaptchaType {
   ROTATED = "rotated",
 }
 
+export interface SiteUrl {
+  url: string
+  is_primary?: boolean
+}
+
 export interface SiteCreate {
   links: string[]
   auth_type: AuthType
@@ -32,8 +37,4 @@ export interface TaskStatus {
   task_id: string
   status: string
   result?: any
-}
-
-export interface UploadScraperResponse {
-  msg: string
 }

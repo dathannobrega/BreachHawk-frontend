@@ -1,76 +1,64 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { siteService } from "@/services/site-service"
-import type { SiteCreate, SiteRead } from "@/types/site"
+import { useState, useEffect } from "react"
+import { SiteService } from "@/services/site-service"
+import type { SiteCreate, SiteRead, TaskResponse, TaskStatus } from "@/types/site"
 
 export function useSites() {
   const [sites, setSites] = useState<SiteRead[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchSites = useCallback(async () => {
+  const fetchSites = async () => {
+    setLoading(true)
+    setError(null)
     try {
-      setLoading(true)
-      setError(null)
-      const data = await siteService.listSites()
+      const data = await SiteService.getSites()
       setSites(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro desconhecido")
+      setError(err instanceof Error ? err.message : "Erro ao buscar sites")
     } finally {
       setLoading(false)
     }
-  }, [])
-
-  const createSite = useCallback(async (siteData: SiteCreate) => {
-    try {
-      setError(null)
-      const newSite = await siteService.createSite(siteData)
-      setSites((prev) => [...prev, newSite])
-      return newSite
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Erro ao criar site"
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    }
-  }, [])
-
-  const uploadScraper = useCallback(async (file: File) => {
-    try {
-      setError(null)
-      return await siteService.uploadScraper(file)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Erro ao fazer upload do scraper"
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    }
-  }, [])
-
-  const runScraper = useCallback(async (siteId: number) => {
-    try {
-      setError(null)
-      return await siteService.runScraper(siteId)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Erro ao executar scraper"
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    }
-  }, [])
-
-  const getTaskStatus = useCallback(async (taskId: string) => {
-    try {
-      setError(null)
-      return await siteService.getTaskStatus(taskId)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Erro ao obter status da task"
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    }
-  }, [])
+  }
 
   useEffect(() => {
     fetchSites()
-  }, [fetchSites])
+  }, [])
+
+  const createSite = async (site: SiteCreate): Promise<SiteRead> => {
+    try {
+      const newSite = await SiteService.createSite(site)
+      setSites((prev) => [...prev, newSite])
+      return newSite
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const uploadScraper = async (file: File): Promise<{ msg: string }> => {
+    try {
+      return await SiteService.uploadScraper(file)
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const runScraper = async (siteId: number): Promise<TaskResponse> => {
+    try {
+      return await SiteService.runScraper(siteId)
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const getTaskStatus = async (taskId: string): Promise<TaskStatus> => {
+    try {
+      return await SiteService.getTaskStatus(taskId)
+    } catch (err) {
+      throw err
+    }
+  }
 
   return {
     sites,
