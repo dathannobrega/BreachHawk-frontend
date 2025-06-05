@@ -17,6 +17,7 @@ export interface SiteUrl {
 }
 
 export interface SiteCreate {
+  name: string
   links: string[]
   auth_type: AuthType
   captcha_type: CaptchaType

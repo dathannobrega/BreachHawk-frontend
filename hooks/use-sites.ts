@@ -36,6 +36,16 @@ export function useSites() {
     }
   }
 
+  const updateSite = async (id: number, site: SiteCreate): Promise<SiteRead> => {
+    try {
+      const updatedSite = await SiteService.updateSite(id, site)
+      setSites((prev) => prev.map((s) => (s.id === id ? updatedSite : s)))
+      return updatedSite
+    } catch (err) {
+      throw err
+    }
+  }
+
   const uploadScraper = async (file: File): Promise<{ msg: string }> => {
     try {
       return await SiteService.uploadScraper(file)
@@ -66,6 +76,7 @@ export function useSites() {
     error,
     fetchSites,
     createSite,
+    updateSite,
     uploadScraper,
     runScraper,
     getTaskStatus,

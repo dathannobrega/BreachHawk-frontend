@@ -45,6 +45,29 @@ export class SiteService {
     }
   }
 
+  static async updateSite(id: number, site: SiteCreate): Promise<SiteRead> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/sites/${id}`, {
+        method: "PUT",
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(site),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao atualizar site")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Error updating site:", error)
+      throw error
+    }
+  }
+
   static async uploadScraper(file: File): Promise<{ msg: string }> {
     try {
       const formData = new FormData()
