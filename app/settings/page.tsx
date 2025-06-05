@@ -38,15 +38,7 @@ import DashboardLayout from "@/components/dashboard-layout"
 export default function UserSettings() {
   const { user, isAuthenticated, loading: authLoading, updateUser } = useAuth()
   const { t, language, setLanguage } = useLanguage()
-  const {
-    loginHistory,
-    sessions,
-    loading: dataLoading,
-    error: dataError,
-    refetch,
-    deleteSession,
-    uploadProfileImage,
-  } = useAuthData()
+  const { loginHistory, sessions, loading: dataLoading, error: dataError, refetch, deleteSession } = useAuthData()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [activeTab, setActiveTab] = useState("profile")
@@ -151,8 +143,8 @@ export default function UserSettings() {
 
     setUploading(true)
     try {
-      // Usar o novo endpoint de upload
-      const updatedUser = await uploadProfileImage(file)
+      // Usar o endpoint correto de upload
+      const updatedUser = await authService.uploadProfileImage(file)
 
       // Atualizar o estado local
       setProfileSettings((prev) => ({

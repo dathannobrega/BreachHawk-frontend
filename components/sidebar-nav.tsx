@@ -156,6 +156,12 @@ export default function SidebarNav() {
 
   const navItems = getNavItems()
 
+  const getSettingsPath = () => {
+    if (user.role === "platform_admin") return "/platform/settings"
+    if (user.role === "admin") return "/admin/settings"
+    return "/settings"
+  }
+
   const NavContent = () => (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
@@ -176,11 +182,11 @@ export default function SidebarNav() {
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-md">
             <span className="text-white font-semibold text-lg">
-              {(user.firstName?.[0] || user.username[0]).toUpperCase()}
+              {(user.first_name?.[0] || user.username[0]).toUpperCase()}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-gray-900 truncate">{user.firstName || user.username}</p>
+            <p className="font-medium text-gray-900 truncate">{user.first_name || user.username}</p>
             <p className="text-sm text-gray-500 truncate">{user.email}</p>
             <Badge
               variant={user.role === "platform_admin" ? "default" : user.role === "admin" ? "secondary" : "outline"}
@@ -236,32 +242,21 @@ export default function SidebarNav() {
         {/* Settings */}
         <div className="space-y-1">
           <Button
-            variant={pathname === "/settings" || pathname === "/admin/settings" ? "default" : "ghost"}
+            variant={pathname === getSettingsPath() ? "default" : "ghost"}
             className={`w-full justify-start h-auto p-3 ${
-              pathname === "/settings" || pathname === "/admin/settings"
-                ? "bg-blue-600 text-white shadow-md"
-                : "hover:bg-gray-100 text-gray-700"
+              pathname === getSettingsPath() ? "bg-blue-600 text-white shadow-md" : "hover:bg-gray-100 text-gray-700"
             }`}
             onClick={() => {
-              const settingsPath = user.role === "admin" ? "/admin/settings" : "/settings"
-              router.push(settingsPath)
+              router.push(getSettingsPath())
               setIsOpen(false)
             }}
           >
             <div className="flex items-center gap-3 w-full">
-              <Settings
-                className={`h-5 w-5 ${
-                  pathname === "/settings" || pathname === "/admin/settings" ? "text-white" : "text-gray-500"
-                }`}
-              />
+              <Settings className={`h-5 w-5 ${pathname === getSettingsPath() ? "text-white" : "text-gray-500"}`} />
               <div className="flex-1 text-left">
                 <span className="font-medium">{t.sidebar.settings || "Configurações"}</span>
-                <p
-                  className={`text-xs mt-0.5 ${
-                    pathname === "/settings" || pathname === "/admin/settings" ? "text-blue-100" : "text-gray-500"
-                  }`}
-                >
-                  Configurações da conta
+                <p className={`text-xs mt-0.5 ${pathname === getSettingsPath() ? "text-blue-100" : "text-gray-500"}`}>
+                  {user.role === "platform_admin" ? "Configurações da plataforma" : "Configurações da conta"}
                 </p>
               </div>
             </div>
