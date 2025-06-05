@@ -6,7 +6,7 @@ class AuthService {
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const token = localStorage.getItem("access_token")
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         ...options?.headers,
@@ -28,15 +28,15 @@ class AuthService {
   }
 
   async getLoginHistory(): Promise<LoginHistoryRead[]> {
-    return this.makeRequest<LoginHistoryRead[]>("/login-history")
+    return this.makeRequest<LoginHistoryRead[]>("/api/v1/auth/login-history")
   }
 
   async getSessions(): Promise<UserSessionRead[]> {
-    return this.makeRequest<UserSessionRead[]>("/sessions")
+    return this.makeRequest<UserSessionRead[]>("/api/v1/auth/sessions")
   }
 
   async deleteSession(sessionId: number): Promise<{ success: boolean }> {
-    return this.makeRequest<{ success: boolean }>(`/sessions/${sessionId}`, {
+    return this.makeRequest<{ success: boolean }>(`/api/v1/auth/sessions/${sessionId}`, {
       method: "DELETE",
     })
   }
@@ -46,7 +46,7 @@ class AuthService {
     const formData = new FormData()
     formData.append("file", file)
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/me/profile-image`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/users/me/profile-image`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

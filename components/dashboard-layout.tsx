@@ -1,41 +1,42 @@
 "use client"
 
 import type React from "react"
-
-import SidebarNav from "@/components/sidebar-nav"
+import { useAuth } from "@/contexts/auth-context"
 import UserHeader from "@/components/user-header"
+import UserFooter from "@/components/user-footer"
+import SidebarNav from "@/components/sidebar-nav"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { user } = useAuth()
+
+  if (!user) return null
+
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-gray-50">
+      {/* Sidebar - Fixed */}
       <aside className="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 overflow-y-auto">
         <SidebarNav />
       </aside>
 
-      {/* Page Content */}
-      <div className="flex-1 ml-64">
-        {/* Header */}
-        <UserHeader />
+      {/* Main Content Area */}
+      <div className="ml-64 flex flex-col min-h-screen">
+        {/* Header - Fixed at top with proper z-index */}
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
+          <UserHeader />
+        </header>
 
-        {/* Main Content */}
-        <main className="py-6 px-6">
-          <div className="min-h-[calc(100vh - 160px)]">{children}</div>
+        {/* Page Content - Scrollable with white background */}
+        <main className="flex-1 bg-white">
+          <div className="p-6">{children}</div>
         </main>
 
         {/* Footer */}
-        <footer className="py-4 px-6 bg-white border-t border-gray-200 text-center">
-          <p className="text-sm text-gray-500">
-            &copy; {new Date().getFullYear()} BreachHawk. Todos os direitos reservados.
-          </p>
-        </footer>
+        <UserFooter />
       </div>
     </div>
   )
 }
-
-export default DashboardLayout

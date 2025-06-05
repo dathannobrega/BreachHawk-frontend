@@ -46,42 +46,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ? "https://www.protexion.cloud/api"
       : "https://dev.protexion.cloud")
 
+  // Função para salvar dados de autenticação
+  const saveAuthData = (token: string, user: User) => {
+    setToken(token)
+    setUser(user)
+    localStorage.setItem("access_token", token)
+    localStorage.setItem("user", JSON.stringify(user))
+    localStorage.setItem("auth_timestamp", Date.now().toString())
+  }
+
+  // Função para limpar dados de autenticação
+  const clearAuthData = () => {
+    setToken(null)
+    setUser(null)
+    localStorage.removeItem("access_token")
+    localStorage.removeItem("user")
+    localStorage.removeItem("auth_timestamp")
+  }
+
+  // Função para verificar se a sessão ainda é válida
+  const isSessionValid = () => {
+    const timestamp = localStorage.getItem("auth_timestamp")
+    if (!timestamp) return false
+
+    const sessionAge = Date.now() - Number.parseInt(timestamp)
+    const maxAge = 24 * 60 * 60 * 1000 // 24 horas
+
+    return sessionAge < maxAge
+  }
+
   useEffect(() => {
     const initializeAuth = async () => {
-      const savedToken = localStorage.getItem("access_token")
-      const savedUser = localStorage.getItem("user")
+      try {
+        const savedToken = localStorage.getItem("access_token")
+        const savedUser = localStorage.getItem("user")
 
-      if (savedToken && savedUser) {
-        try {
-          // Primeiro, tenta usar os dados salvos
+        if (savedToken && savedUser && isSessionValid()) {
           const userData = JSON.parse(savedUser)
           setToken(savedToken)
           setUser(userData)
 
-          // Depois, tenta validar o token fazendo uma requisição simples
-          // Como /users/me não existe, vamos tentar uma rota que sabemos que existe
-          const response = await fetch(`${apiUrl}/api/v1/auth/validate-token`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${savedToken}`,
-              "Content-Type": "application/json",
-            },
-          })
+          // Tentar validar o token com o backend (opcional)
+          try {
+            const response = await fetch(`${apiUrl}/api/v1/users/me`, {
+              headers: {
+                Authorization: `Bearer ${savedToken}`,
+              },
+            })
 
-          // Se a validação falhar, limpa os dados
-          if (!response.ok) {
-            console.log("Token inválido, limpando dados de autenticação")
-            localStorage.removeItem("access_token")
-            localStorage.removeItem("user")
-            setToken(null)
-            setUser(null)
+            if (response.ok) {
+              const currentUser = await response.json()
+              // Atualizar com dados mais recentes do servidor
+              saveAuthData(savedToken, currentUser)
+            }
+          } catch (error) {
+            console.log("Não foi possível validar com o servidor, usando dados locais")
           }
-        } catch (error) {
-          console.error("Erro ao validar token:", error)
-          // Em caso de erro, mantém os dados salvos para funcionar offline
+        } else {
+          // Sessão expirada ou inválida
+          clearAuthData()
         }
+      } catch (error) {
+        console.error("Erro ao inicializar autenticação:", error)
+        clearAuthData()
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     initializeAuth()
@@ -103,12 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json()
-
-      setToken(data.access_token)
-      setUser(data.user)
-
-      localStorage.setItem("access_token", data.access_token)
-      localStorage.setItem("user", JSON.stringify(data.user))
+      saveAuthData(data.access_token, data.user)
 
       // Redirecionar baseado no role do usuário
       if (data.user.role === "platform_admin") {
@@ -124,10 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const loginWithToken = (data: { token: string; user: User }) => {
-    setToken(data.token)
-    setUser(data.user)
-    localStorage.setItem("access_token", data.token)
-    localStorage.setItem("user", JSON.stringify(data.user))
+    saveAuthData(data.token, data.user)
   }
 
   const updateUser = (userData: User) => {
@@ -151,12 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const result = await response.json()
-
-      setToken(result.access_token)
-      setUser(result.user)
-
-      localStorage.setItem("access_token", result.access_token)
-      localStorage.setItem("user", JSON.stringify(result.user))
+      saveAuthData(result.access_token, result.user)
 
       router.push("/dashboard")
     } catch (error) {
@@ -165,10 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    setUser(null)
-    setToken(null)
-    localStorage.removeItem("access_token")
-    localStorage.removeItem("user")
+    clearAuthData()
     router.push("/login")
   }
 

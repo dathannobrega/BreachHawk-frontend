@@ -20,7 +20,6 @@ import {
   Bell,
   Upload,
   Shield,
-  History,
   Camera,
   Trash2,
   Monitor,
@@ -28,6 +27,7 @@ import {
   Globe,
   CheckCircle,
   XCircle,
+  RefreshCw,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useLanguage } from "@/contexts/language-context"
@@ -166,6 +166,7 @@ export default function UserSettings() {
       setMessage("Imagem atualizada com sucesso!")
       setTimeout(() => setMessage(""), 3000)
     } catch (error) {
+      console.error("Erro no upload:", error)
       setMessage("Erro ao fazer upload da imagem.")
     } finally {
       setUploading(false)
@@ -211,6 +212,38 @@ export default function UserSettings() {
       setTimeout(() => setMessage(""), 3000)
     } catch (error: any) {
       setMessage(error.message || "Erro ao atualizar perfil")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleNotificationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const response = await fetch(`${apiUrl}/api/v1/users/me`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify({
+          is_subscribed: notificationSettings.isSubscribed,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao atualizar notificações")
+      }
+
+      const updatedUser = await response.json()
+      updateUser(updatedUser)
+
+      setMessage("Preferências de notificação atualizadas com sucesso!")
+      setTimeout(() => setMessage(""), 3000)
+    } catch (error: any) {
+      setMessage(error.message || "Erro ao atualizar notificações")
     } finally {
       setSaving(false)
     }
@@ -307,7 +340,7 @@ export default function UserSettings() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto p-6 bg-white min-h-screen">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Configurações</h1>
@@ -497,17 +530,6 @@ export default function UserSettings() {
                     </Select>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="subscribed"
-                      checked={notificationSettings.isSubscribed}
-                      onCheckedChange={(checked) =>
-                        setNotificationSettings({ ...notificationSettings, isSubscribed: checked })
-                      }
-                    />
-                    <Label htmlFor="subscribed">Receber notificações por email</Label>
-                  </div>
-
                   <Button type="submit" disabled={saving} className="w-full md:w-auto">
                     {saving ? "Salvando..." : "Salvar Alterações"}
                   </Button>
@@ -576,7 +598,20 @@ export default function UserSettings() {
                 <CardDescription>Configure como você deseja receber notificações</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
+                <form onSubmit={handleNotificationSubmit} className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Receber Notificações por Email</Label>
+                      <p className="text-sm text-gray-500">Receba alertas e atualizações por email</p>
+                    </div>
+                    <Switch
+                      checked={notificationSettings.isSubscribed}
+                      onCheckedChange={(checked) =>
+                        setNotificationSettings({ ...notificationSettings, isSubscribed: checked })
+                      }
+                    />
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>Alertas por Email</Label>
@@ -616,10 +651,10 @@ export default function UserSettings() {
                     />
                   </div>
 
-                  <Button onClick={handleProfileSubmit} disabled={saving} className="w-full md:w-auto">
+                  <Button type="submit" disabled={saving} className="w-full md:w-auto">
                     {saving ? "Salvando..." : "Salvar Preferências"}
                   </Button>
-                </div>
+                </form>
               </CardContent>
             </Card>
           </TabsContent>
@@ -652,8 +687,16 @@ export default function UserSettings() {
               {/* Active Sessions */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Sessões Ativas</CardTitle>
-                  <CardDescription>Gerencie onde você está logado</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Sessões Ativas</CardTitle>
+                      <CardDescription>Gerencie onde você está logado</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={refetch} disabled={dataLoading}>
+                      <RefreshCw className={`h-4 w-4 mr-2 ${dataLoading ? "animate-spin" : ""}`} />
+                      Atualizar
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {dataLoading ? (
@@ -720,8 +763,16 @@ export default function UserSettings() {
               {/* Login History */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Histórico de Login</CardTitle>
-                  <CardDescription>Veja quando e onde você fez login</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Histórico de Login</CardTitle>
+                      <CardDescription>Veja quando e onde você fez login</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={refetch} disabled={dataLoading}>
+                      <RefreshCw className={`h-4 w-4 mr-2 ${dataLoading ? "animate-spin" : ""}`} />
+                      Atualizar
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {dataLoading ? (
@@ -763,10 +814,11 @@ export default function UserSettings() {
                       )}
 
                       {loginHistory.length > 10 && (
-                        <Button variant="outline" className="w-full mt-4" onClick={refetch}>
-                          <History className="h-4 w-4 mr-2" />
-                          Ver Histórico Completo
-                        </Button>
+                        <div className="text-center pt-4">
+                          <p className="text-sm text-gray-500">
+                            Mostrando os 10 logins mais recentes de {loginHistory.length} total
+                          </p>
+                        </div>
                       )}
                     </div>
                   )}

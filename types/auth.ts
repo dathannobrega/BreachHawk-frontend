@@ -1,24 +1,22 @@
-export interface LoginHistory {
+export interface LoginHistoryRead {
   id: number
   user_id: number
-  ip_address?: string | null
+  ip_address: string
   user_agent?: string | null
   location?: string | null
-  timestamp: string
   success: boolean
+  timestamp: string
 }
 
-export interface UserSession {
+export interface UserSessionRead {
   id: number
   user_id: number
   session_token: string
-  ip_address?: string | null
+  ip_address: string
   user_agent?: string | null
   location?: string | null
+  is_active: boolean
   created_at: string
   last_activity?: string | null
-  is_active: boolean
+  expires_at?: string | null
 }
-
-export interface LoginHistoryRead extends LoginHistory {}
-export interface UserSessionRead extends UserSession {}
