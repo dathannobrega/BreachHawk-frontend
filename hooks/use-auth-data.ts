@@ -39,16 +39,6 @@ export function useAuthData() {
     }
   }
 
-  const uploadProfileImage = async (file: File) => {
-    try {
-      const result = await authService.uploadProfileImage(file)
-      return result
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao fazer upload da imagem")
-      throw err
-    }
-  }
-
   useEffect(() => {
     fetchData()
   }, [])
@@ -60,6 +50,5 @@ export function useAuthData() {
     error,
     refetch: fetchData,
     deleteSession,
-    uploadProfileImage,
   }
 }

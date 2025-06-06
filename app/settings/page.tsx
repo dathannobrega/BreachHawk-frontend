@@ -34,6 +34,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { useAuthData } from "@/hooks/use-auth-data"
 import { authService } from "@/services/auth-service"
 import DashboardLayout from "@/components/dashboard-layout"
+import { userSettingsService } from "@/services/user-settings-service"
 
 export default function UserSettings() {
   const { user, isAuthenticated, loading: authLoading, updateUser } = useAuth()
@@ -75,9 +76,8 @@ export default function UserSettings() {
     weeklyReport: true,
   })
 
-  // Security settings
+  // Security settings - remover configurações não implementadas
   const [securitySettings, setSecuritySettings] = useState({
-    twoFactorEnabled: false,
     loginNotifications: true,
   })
 
@@ -143,8 +143,7 @@ export default function UserSettings() {
 
     setUploading(true)
     try {
-      // Usar o endpoint correto de upload
-      const updatedUser = await authService.uploadProfileImage(file)
+      const updatedUser = await userSettingsService.uploadProfileImage(file)
 
       // Atualizar o estado local
       setProfileSettings((prev) => ({
@@ -165,34 +164,46 @@ export default function UserSettings() {
     }
   }
 
+  const handleRemoveImage = async () => {
+    setUploading(true)
+    try {
+      await userSettingsService.deleteProfileImage()
+
+      // Atualizar o estado local
+      setProfileSettings((prev) => ({
+        ...prev,
+        profileImage: "",
+      }))
+
+      // Atualizar o usuário no contexto
+      const updatedUser = { ...user, profile_image: null }
+      updateUser(updatedUser)
+
+      setMessage("Imagem removida com sucesso!")
+      setTimeout(() => setMessage(""), 3000)
+    } catch (error) {
+      console.error("Erro ao remover imagem:", error)
+      setMessage("Erro ao remover imagem.")
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     try {
-      const response = await fetch(`${apiUrl}/api/v1/users/me`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-        body: JSON.stringify({
-          username: profileSettings.username || null,
-          first_name: profileSettings.firstName || null,
-          last_name: profileSettings.lastName || null,
-          organization: profileSettings.organization || null,
-          contact: profileSettings.contact || null,
-          company: profileSettings.company || null,
-          job_title: profileSettings.jobTitle || null,
-          is_subscribed: notificationSettings.isSubscribed,
-        }),
+      const updatedUser = await userSettingsService.updateProfile({
+        username: profileSettings.username || null,
+        first_name: profileSettings.firstName || null,
+        last_name: profileSettings.lastName || null,
+        organization: profileSettings.organization || null,
+        contact: profileSettings.contact || null,
+        company: profileSettings.company || null,
+        job_title: profileSettings.jobTitle || null,
+        is_subscribed: notificationSettings.isSubscribed,
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao atualizar perfil")
-      }
-
-      const updatedUser = await response.json()
       updateUser(updatedUser)
 
       // Update language if changed
@@ -213,23 +224,10 @@ export default function UserSettings() {
     e.preventDefault()
     setSaving(true)
     try {
-      const response = await fetch(`${apiUrl}/api/v1/users/me`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-        body: JSON.stringify({
-          is_subscribed: notificationSettings.isSubscribed,
-        }),
+      const updatedUser = await userSettingsService.updateProfile({
+        is_subscribed: notificationSettings.isSubscribed,
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao atualizar notificações")
-      }
-
-      const updatedUser = await response.json()
       updateUser(updatedUser)
 
       setMessage("Preferências de notificação atualizadas com sucesso!")
@@ -256,22 +254,10 @@ export default function UserSettings() {
 
     setSaving(true)
     try {
-      const response = await fetch(`${apiUrl}/api/v1/auth/change-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-        body: JSON.stringify({
-          old_password: passwordSettings.oldPassword,
-          new_password: passwordSettings.newPassword,
-        }),
+      await userSettingsService.changePassword({
+        old_password: passwordSettings.oldPassword,
+        new_password: passwordSettings.newPassword,
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao alterar senha")
-      }
 
       setMessage("Senha alterada com sucesso!")
       setPasswordSettings({
@@ -402,7 +388,7 @@ export default function UserSettings() {
                       </Button>
                     </div>
                     <div className="space-y-2">
-                      <div>
+                      <div className="flex gap-2">
                         <Button
                           type="button"
                           variant="outline"
@@ -412,14 +398,26 @@ export default function UserSettings() {
                           <Upload className="h-4 w-4 mr-2" />
                           {uploading ? "Enviando..." : "Alterar Foto"}
                         </Button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
+                        {profileSettings.profileImage && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleRemoveImage}
+                            disabled={uploading}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Remover
+                          </Button>
+                        )}
                       </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
                       <p className="text-sm text-gray-500">JPG, PNG ou GIF. Máximo 5MB.</p>
                     </div>
                   </div>
@@ -654,28 +652,6 @@ export default function UserSettings() {
           {/* Security Settings */}
           <TabsContent value="security">
             <div className="space-y-6">
-              {/* Two Factor Authentication */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Autenticação de Dois Fatores</CardTitle>
-                  <CardDescription>Adicione uma camada extra de segurança à sua conta</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Autenticação de Dois Fatores</Label>
-                      <p className="text-sm text-gray-500">Adicione uma camada extra de segurança</p>
-                    </div>
-                    <Switch
-                      checked={securitySettings.twoFactorEnabled}
-                      onCheckedChange={(checked) =>
-                        setSecuritySettings({ ...securitySettings, twoFactorEnabled: checked })
-                      }
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Active Sessions */}
               <Card>
                 <CardHeader>
