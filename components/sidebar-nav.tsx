@@ -36,6 +36,10 @@ interface NavItem {
   roles?: string[]
 }
 
+interface SidebarNavProps {
+  onCollapseChange?: (collapsed: boolean) => void
+}
+
 const navigationItems: NavItem[] = [
   {
     title: "Dashboard",
@@ -107,11 +111,16 @@ const navigationItems: NavItem[] = [
   },
 ]
 
-export function SidebarNav() {
+export function SidebarNav({ onCollapseChange }: SidebarNavProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const pathname = usePathname()
   const { user } = useAuth()
+
+  // Notify parent component when collapse state changes
+  useEffect(() => {
+    onCollapseChange?.(isCollapsed)
+  }, [isCollapsed, onCollapseChange])
 
   // Close mobile sidebar when route changes
   useEffect(() => {
@@ -166,6 +175,10 @@ export function SidebarNav() {
     }
   }
 
+  const handleToggleCollapse = () => {
+    setIsCollapsed(!isCollapsed)
+  }
+
   const NavContent = () => (
     <div className="flex h-full flex-col bg-white">
       {/* Header */}
@@ -188,7 +201,7 @@ export function SidebarNav() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={handleToggleCollapse}
           className="hidden lg:flex h-8 w-8 p-0 hover:bg-slate-100"
         >
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -223,7 +236,13 @@ export function SidebarNav() {
                 isCollapsed && "justify-center",
               )}
             >
-              <item.icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
+              <item.icon
+                className={cn(
+                  "transition-all duration-200",
+                  isCollapsed ? "h-6 w-6" : "h-5 w-5", // Ícones maiores quando colapsado
+                  !isCollapsed && "mr-3",
+                )}
+              />
               {!isCollapsed && (
                 <>
                   <span className="flex-1">{item.title}</span>
@@ -264,7 +283,9 @@ export function SidebarNav() {
           </div>
         ) : (
           <div className="flex justify-center">
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-10 w-10">
+              {" "}
+              {/* Avatar maior quando colapsado */}
               {user?.profile_image ? (
                 <AvatarImage
                   src={user.profile_image || "/placeholder.svg"}
@@ -272,9 +293,7 @@ export function SidebarNav() {
                   className="object-cover"
                 />
               ) : (
-                <AvatarFallback className="bg-blue-100 text-blue-700 font-medium text-xs">
-                  {getUserInitials()}
-                </AvatarFallback>
+                <AvatarFallback className="bg-blue-100 text-blue-700 font-medium">{getUserInitials()}</AvatarFallback>
               )}
             </Avatar>
           </div>

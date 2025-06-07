@@ -322,9 +322,9 @@ export default function UserSettings() {
     return profileSettings.profileImage
   }
 
-  const getDeviceIcon = (userAgent?: string | null) => {
-    if (!userAgent) return Monitor
-    if (userAgent.includes("Mobile") || userAgent.includes("Android") || userAgent.includes("iPhone")) {
+  const getDeviceIcon = (device?: string | null) => {
+    if (!device) return Monitor
+    if (device.includes("Mobile") || device.includes("Android") || device.includes("iPhone")) {
       return Smartphone
     }
     return Monitor
@@ -639,8 +639,9 @@ export default function UserSettings() {
                   ) : (
                     <div className="space-y-4">
                       {sessions.map((session) => {
-                        const { browser, os } = authService.parseUserAgent(session.user_agent)
-                        const DeviceIcon = getDeviceIcon(session.user_agent)
+                        const { browser, os } = authService.parseDevice(session.device)
+                        const DeviceIcon = getDeviceIcon(session.device)
+                        const isExpired = authService.isSessionExpired(session.expires_at)
 
                         return (
                           <div key={session.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -655,21 +656,25 @@ export default function UserSettings() {
                                   {authService.getLocationDisplay(session.location)}
                                 </p>
                                 <p className="text-xs text-gray-400">
-                                  Última atividade:{" "}
-                                  {authService.formatTimeAgo(session.last_activity || session.created_at)}
+                                  Criada em: {authService.formatTimeAgo(session.created_at)}
                                 </p>
+                                {session.expires_at && (
+                                  <p className="text-xs text-gray-400">
+                                    Expira em: {authService.formatDateTime(session.expires_at)}
+                                  </p>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              {session.is_active ? (
+                              {!isExpired ? (
                                 <Badge variant="secondary" className="bg-green-100 text-green-800">
                                   <CheckCircle className="h-3 w-3 mr-1" />
                                   Ativa
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+                                <Badge variant="secondary" className="bg-red-100 text-red-800">
                                   <XCircle className="h-3 w-3 mr-1" />
-                                  Inativa
+                                  Expirada
                                 </Badge>
                               )}
                               <Button
@@ -715,7 +720,7 @@ export default function UserSettings() {
                   ) : (
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {loginHistory.slice(0, 10).map((login) => {
-                        const { browser, os } = authService.parseUserAgent(login.user_agent)
+                        const { browser, os } = authService.parseDevice(login.device)
 
                         return (
                           <div key={login.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

@@ -88,30 +88,43 @@ class AuthService {
     return this.formatDate(dateString)
   }
 
-  parseUserAgent(userAgent?: string | null): { browser: string; os: string } {
-    if (!userAgent) return { browser: "Desconhecido", os: "Desconhecido" }
+  parseDevice(device?: string | null): { browser: string; os: string } {
+    if (!device) return { browser: "Desconhecido", os: "Desconhecido" }
 
     let browser = "Desconhecido"
     let os = "Desconhecido"
 
     // Detectar browser
-    if (userAgent.includes("Chrome")) browser = "Chrome"
-    else if (userAgent.includes("Firefox")) browser = "Firefox"
-    else if (userAgent.includes("Safari")) browser = "Safari"
-    else if (userAgent.includes("Edge")) browser = "Edge"
+    if (device.includes("Chrome")) browser = "Chrome"
+    else if (device.includes("Firefox")) browser = "Firefox"
+    else if (device.includes("Safari")) browser = "Safari"
+    else if (device.includes("Edge")) browser = "Edge"
 
     // Detectar OS
-    if (userAgent.includes("Windows")) os = "Windows"
-    else if (userAgent.includes("Mac")) os = "macOS"
-    else if (userAgent.includes("Linux")) os = "Linux"
-    else if (userAgent.includes("Android")) os = "Android"
-    else if (userAgent.includes("iOS")) os = "iOS"
+    if (device.includes("Windows")) os = "Windows"
+    else if (device.includes("Mac")) os = "macOS"
+    else if (device.includes("Linux")) os = "Linux"
+    else if (device.includes("Android")) os = "Android"
+    else if (device.includes("iOS")) os = "iOS"
 
     return { browser, os }
   }
 
   getLocationDisplay(location?: string | null): string {
     return location || "Localização desconhecida"
+  }
+
+  isSessionExpired(expiresAt?: string | null): boolean {
+    if (!expiresAt) return false
+    return new Date(expiresAt) < new Date()
+  }
+
+  getDeviceIcon(device?: string | null): "desktop" | "mobile" {
+    if (!device) return "desktop"
+    if (device.includes("Mobile") || device.includes("Android") || device.includes("iPhone")) {
+      return "mobile"
+    }
+    return "desktop"
   }
 }
 

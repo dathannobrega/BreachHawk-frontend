@@ -5,7 +5,7 @@ import { SidebarNav } from "@/components/sidebar-nav"
 import { UserHeader } from "@/components/user-header"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter, usePathname } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
 interface DashboardLayoutProps {
@@ -16,6 +16,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, isAuthenticated, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -95,10 +96,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <SidebarNav />
+      <SidebarNav onCollapseChange={setSidebarCollapsed} />
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col lg:ml-16 xl:ml-64 transition-all duration-300">
+      {/* Main Content Area - Ajusta dinamicamente baseado no estado da sidebar */}
+      <div className={`flex flex-1 flex-col transition-all duration-300 ${sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"}`}>
         <UserHeader breadcrumbs={getBreadcrumbs()} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-slate-50">{children}</main>
         <footer className="border-t border-slate-200 bg-white py-4 px-6 text-center text-sm text-slate-500">
