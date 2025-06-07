@@ -1,272 +1,284 @@
 "use client"
 
-import { useRouter, usePathname } from "next/navigation"
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAuth } from "@/contexts/auth-context"
 import {
   LayoutDashboard,
   Search,
   Shield,
   Users,
-  Settings,
   Building,
+  Settings,
+  CreditCard,
   Globe,
-  LogOut,
+  ChevronLeft,
+  ChevronRight,
   Menu,
   X,
-  FileText,
-  Bell,
-  CreditCard,
-  Lock,
+  AlertTriangle,
+  BarChart3,
+  UserCheck,
 } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-import { useLanguage } from "@/contexts/language-context"
-import { useState } from "react"
 
-export default function SidebarNav() {
-  const { user, logout } = useAuth()
-  const { t } = useLanguage()
-  const router = useRouter()
+interface NavItem {
+  title: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+  badge?: string
+  roles?: string[]
+}
+
+const navigationItems: NavItem[] = [
+  {
+    title: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Pesquisar",
+    href: "/search",
+    icon: Search,
+    roles: ["user", "admin"],
+  },
+  {
+    title: "Vazamentos",
+    href: "/leaks",
+    icon: AlertTriangle,
+    badge: "3",
+    roles: ["user", "admin"],
+  },
+  // Admin específico
+  {
+    title: "Sites",
+    href: "/admin/sites",
+    icon: Globe,
+    roles: ["admin"],
+  },
+  {
+    title: "Usuários da Empresa",
+    href: "/admin/users",
+    icon: UserCheck,
+    roles: ["admin"],
+  },
+  // Platform Admin específico
+  {
+    title: "Dashboard Plataforma",
+    href: "/platform/dashboard",
+    icon: BarChart3,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Todas as Empresas",
+    href: "/platform/companies",
+    icon: Building,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Todos os Usuários",
+    href: "/platform/users",
+    icon: Users,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Sites Globais",
+    href: "/platform/sites",
+    icon: Globe,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Faturamento",
+    href: "/platform/billing",
+    icon: CreditCard,
+    roles: ["platform_admin"],
+  },
+  // Comum a todos
+  {
+    title: "Configurações",
+    href: "/settings",
+    icon: Settings,
+  },
+]
+
+export function SidebarNav() {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
   const pathname = usePathname()
-  const [isOpen, setIsOpen] = useState(false)
+  const { user } = useAuth()
 
-  // Verificação de segurança para evitar erros
-  if (!user) return null
-  if (!t || !t.sidebar) {
-    return (
-      <div className="hidden md:flex md:w-80 md:flex-col md:fixed md:inset-y-0 bg-white border-r shadow-sm">
-        <div className="flex items-center justify-center h-full">
-          <div className="animate-pulse text-gray-400">Carregando...</div>
-        </div>
-      </div>
-    )
+  // Close mobile sidebar when route changes
+  useEffect(() => {
+    setIsMobileOpen(false)
+  }, [pathname])
+
+  // Filter navigation items based on user role
+  const filteredItems = navigationItems.filter((item) => {
+    if (!item.roles) return true
+    return item.roles.includes(user?.role || "")
+  })
+
+  const getUserDisplayName = () => {
+    if (!user) return "Usuário"
+    if (user.first_name && user.last_name) {
+      return `${user.first_name} ${user.last_name}`
+    }
+    if (user.first_name) return user.first_name
+    if (user.username) return user.username
+    return "Usuário"
   }
 
-  const getNavItems = () => {
-    if (user.role === "user") {
-      return [
-        {
-          label: t.sidebar.dashboard || "Dashboard",
-          icon: LayoutDashboard,
-          href: "/dashboard",
-          description: "Visão geral da sua conta",
-        },
-        {
-          label: t.sidebar.search || "Pesquisar",
-          icon: Search,
-          href: "/search",
-          description: "Pesquisar vazamentos",
-        },
-        {
-          label: t.sidebar.leaks || "Vazamentos",
-          icon: Shield,
-          href: "/leaks",
-          description: "Vazamentos detectados",
-          badge: "3", // Exemplo de badge
-        },
-        {
-          label: t.sidebar.reports || "Relatórios",
-          icon: FileText,
-          href: "/reports",
-          description: "Relatórios detalhados",
-        },
-        {
-          label: t.sidebar.alerts || "Alertas",
-          icon: Bell,
-          href: "/alerts",
-          description: "Configurar alertas",
-        },
-      ]
+  const getUserInitials = () => {
+    if (!user) return "U"
+    if (user.first_name && user.last_name) {
+      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
     }
-
-    if (user.role === "admin") {
-      return [
-        {
-          label: t.sidebar.dashboard || "Dashboard",
-          icon: LayoutDashboard,
-          href: "/admin/dashboard",
-          description: "Painel administrativo",
-        },
-        {
-          label: t.sidebar.users || "Usuários",
-          icon: Users,
-          href: "/admin/users",
-          description: "Gerenciar usuários",
-        },
-        {
-          label: t.sidebar.domains || "Domínios",
-          icon: Globe,
-          href: "/admin/domains",
-          description: "Domínios monitorados",
-        },
-        {
-          label: t.sidebar.security || "Segurança",
-          icon: Lock,
-          href: "/admin/security",
-          description: "Configurações de segurança",
-        },
-      ]
-    }
-
-    if (user.role === "platform_admin") {
-      return [
-        {
-          label: t.sidebar.dashboard || "Dashboard",
-          icon: LayoutDashboard,
-          href: "/platform/dashboard",
-          description: "Painel da plataforma",
-        },
-        {
-          label: t.sidebar.companies || "Empresas",
-          icon: Building,
-          href: "/platform/companies",
-          description: "Gerenciar empresas",
-        },
-        {
-          label: t.sidebar.users || "Usuários",
-          icon: Users,
-          href: "/platform/users",
-          description: "Todos os usuários",
-        },
-        {
-          label: t.sidebar.billing || "Financeiro",
-          icon: CreditCard,
-          href: "/platform/billing",
-          description: "Faturamento e pagamentos",
-        },
-        {
-          label: t.sidebar.sites || "Sites",
-          icon: Globe,
-          href: "/platform/sites",
-          description: "Gerenciar sites de scraping",
-        },
-      ]
-    }
-
-    return []
+    if (user.first_name) return user.first_name[0].toUpperCase()
+    if (user.username) return user.username[0].toUpperCase()
+    return "U"
   }
 
-  const navItems = getNavItems()
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "platform_admin":
+        return "Admin Plataforma"
+      case "admin":
+        return "Administrador"
+      default:
+        return "Usuário"
+    }
+  }
 
-  const getSettingsPath = () => {
-    if (user.role === "platform_admin") return "/platform/settings"
-    if (user.role === "admin") return "/admin/settings"
-    return "/settings"
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case "platform_admin":
+        return "bg-purple-100 text-purple-800"
+      case "admin":
+        return "bg-blue-100 text-blue-800"
+      default:
+        return "bg-slate-100 text-slate-800"
+    }
   }
 
   const NavContent = () => (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex h-full flex-col bg-white">
       {/* Header */}
-      <div className="p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-white/20 rounded-lg">
-            <Shield className="h-6 w-6 text-white" />
+      <div
+        className={cn(
+          "flex items-center border-b border-slate-200 p-4",
+          isCollapsed ? "justify-center" : "justify-between",
+        )}
+      >
+        {!isCollapsed && (
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-bold text-lg text-slate-900">BreachHawk</span>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-white">BreachHawk</h2>
-            {user.company && <p className="text-xs text-blue-100 truncate max-w-[150px]">{user.company.name}</p>}
-          </div>
-        </div>
-      </div>
+        )}
 
-      {/* User Info */}
-      <div className="p-4 border-b bg-gray-50">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-md">
-            <span className="text-white font-semibold text-lg">
-              {(user.first_name?.[0] || user.username[0]).toUpperCase()}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-gray-900 truncate">{user.first_name || user.username}</p>
-            <p className="text-sm text-gray-500 truncate">{user.email}</p>
-            <Badge
-              variant={user.role === "platform_admin" ? "default" : user.role === "admin" ? "secondary" : "outline"}
-              className="text-xs mt-1"
-            >
-              {user.role === "platform_admin" ? "Platform Admin" : user.role === "admin" ? "Admin" : "Usuário"}
-            </Badge>
-          </div>
-        </div>
+        {/* Desktop collapse button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="hidden lg:flex h-8 w-8 p-0 hover:bg-slate-100"
+        >
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
+
+        {/* Mobile close button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsMobileOpen(false)}
+          className="lg:hidden h-8 w-8 p-0 hover:bg-slate-100"
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-1">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href
-            return (
-              <div key={item.href} className="group">
-                <Button
-                  variant={isActive ? "default" : "ghost"}
-                  className={`w-full justify-start h-auto p-3 ${
-                    isActive ? "bg-blue-600 text-white shadow-md" : "hover:bg-gray-100 text-gray-700"
-                  }`}
-                  onClick={() => {
-                    router.push(item.href)
-                    setIsOpen(false)
-                  }}
-                >
-                  <div className="flex items-center gap-3 w-full">
-                    <item.icon className={`h-5 w-5 ${isActive ? "text-white" : "text-gray-500"}`} />
-                    <div className="flex-1 text-left">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{item.label}</span>
-                        {item.badge && (
-                          <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
-                            {item.badge}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className={`text-xs mt-0.5 ${isActive ? "text-blue-100" : "text-gray-500"}`}>
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                </Button>
-              </div>
-            )
-          })}
-        </div>
+      <nav className="flex-1 space-y-1 p-4">
+        {filteredItems.map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
 
-        <Separator className="my-4" />
-
-        {/* Settings */}
-        <div className="space-y-1">
-          <Button
-            variant={pathname === getSettingsPath() ? "default" : "ghost"}
-            className={`w-full justify-start h-auto p-3 ${
-              pathname === getSettingsPath() ? "bg-blue-600 text-white shadow-md" : "hover:bg-gray-100 text-gray-700"
-            }`}
-            onClick={() => {
-              router.push(getSettingsPath())
-              setIsOpen(false)
-            }}
-          >
-            <div className="flex items-center gap-3 w-full">
-              <Settings className={`h-5 w-5 ${pathname === getSettingsPath() ? "text-white" : "text-gray-500"}`} />
-              <div className="flex-1 text-left">
-                <span className="font-medium">{t.sidebar.settings || "Configurações"}</span>
-                <p className={`text-xs mt-0.5 ${pathname === getSettingsPath() ? "text-blue-100" : "text-gray-500"}`}>
-                  {user.role === "platform_admin" ? "Configurações da plataforma" : "Configurações da conta"}
-                </p>
-              </div>
-            </div>
-          </Button>
-        </div>
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                isActive
+                  ? "bg-blue-100 text-blue-900 border border-blue-200"
+                  : "text-slate-700 hover:bg-slate-100 hover:text-slate-900",
+                isCollapsed && "justify-center",
+              )}
+            >
+              <item.icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
+              {!isCollapsed && (
+                <>
+                  <span className="flex-1">{item.title}</span>
+                  {item.badge && (
+                    <Badge variant="secondary" className="ml-auto bg-red-100 text-red-800">
+                      {item.badge}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </Link>
+          )
+        })}
       </nav>
 
-      {/* Logout */}
-      <div className="p-4 border-t bg-gray-50">
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-          onClick={logout}
-        >
-          <LogOut className="h-4 w-4 mr-3" />
-          {t.sidebar.logout || "Sair"}
-        </Button>
+      {/* User Info Footer */}
+      <div className="border-t border-slate-200 p-4">
+        {!isCollapsed ? (
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-10 w-10">
+              {user?.profile_image ? (
+                <AvatarImage
+                  src={user.profile_image || "/placeholder.svg"}
+                  alt={getUserDisplayName()}
+                  className="object-cover"
+                />
+              ) : (
+                <AvatarFallback className="bg-blue-100 text-blue-700 font-medium">{getUserInitials()}</AvatarFallback>
+              )}
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-slate-900 truncate">{getUserDisplayName()}</p>
+              <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+              <Badge variant="secondary" className={cn("text-xs mt-1", getRoleColor(user?.role || "user"))}>
+                {getRoleLabel(user?.role || "user")}
+              </Badge>
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <Avatar className="h-8 w-8">
+              {user?.profile_image ? (
+                <AvatarImage
+                  src={user.profile_image || "/placeholder.svg"}
+                  alt={getUserDisplayName()}
+                  className="object-cover"
+                />
+              ) : (
+                <AvatarFallback className="bg-blue-100 text-blue-700 font-medium text-xs">
+                  {getUserInitials()}
+                </AvatarFallback>
+              )}
+            </Avatar>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -277,26 +289,36 @@ export default function SidebarNav() {
       <Button
         variant="ghost"
         size="sm"
-        className="fixed top-4 left-4 z-50 md:hidden bg-white shadow-md"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsMobileOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-50 h-10 w-10 p-0 bg-white shadow-md border border-slate-200"
       >
-        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        <Menu className="h-5 w-5" />
       </Button>
 
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setIsMobileOpen(false)} />
+      )}
+
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex md:w-80 md:flex-col md:fixed md:inset-y-0 bg-white border-r shadow-sm">
+      <aside
+        className={cn(
+          "hidden lg:flex flex-col border-r border-slate-200 transition-all duration-300 fixed inset-y-0 left-0 z-30",
+          isCollapsed ? "w-16" : "w-64",
+        )}
+      >
         <NavContent />
-      </div>
+      </aside>
 
       {/* Mobile Sidebar */}
-      {isOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsOpen(false)} />
-          <div className="fixed inset-y-0 left-0 w-80 bg-white shadow-xl">
-            <NavContent />
-          </div>
-        </div>
-      )}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 border-r border-slate-200 transform transition-transform duration-300 lg:hidden",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <NavContent />
+      </aside>
     </>
   )
 }

@@ -1,123 +1,74 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { useRouter } from "next/navigation"
 
-// Atualizar a interface User para corresponder exatamente à resposta do backend
 interface User {
   id: number
-  username: string
+  username: string | null
   email: string
-  first_name?: string
-  last_name?: string
+  first_name: string | null
+  last_name: string | null
   role: "admin" | "user" | "platform_admin"
-  profile_image?: string
-  organization?: string
-  contact?: string
-  company?: string
-  job_title?: string
-  is_subscribed?: boolean
+  company: string | null
+  job_title: string | null
+  profile_image: string | null
+  organization: string | null
+  contact: string | null
+  is_subscribed: boolean
 }
 
 interface AuthContextType {
   user: User | null
-  token: string | null
-  login: (credentials: { username: string; password: string }) => Promise<void>
+  isAuthenticated: boolean
+  loading: boolean
+  login: (credentials: { username: string; email?: string | null; password: string }) => Promise<void>
   loginWithToken: (data: { token: string; user: User }) => void
   logout: () => void
-  register: (data: any) => Promise<void>
-  updateUser: (userData: User) => void
-  loading: boolean
-  isAuthenticated: boolean
+  updateUser: (userData: Partial<User>) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
 
-  // Usa a URL da API do ambiente
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    (typeof window !== "undefined" && window.location.hostname === "www.protexion.cloud"
-      ? "https://www.protexion.cloud/api"
-      : "https://dev.protexion.cloud")
-
-  // Função para salvar dados de autenticação
-  const saveAuthData = (token: string, user: User) => {
-    setToken(token)
-    setUser(user)
-    localStorage.setItem("access_token", token)
-    localStorage.setItem("user", JSON.stringify(user))
-    localStorage.setItem("auth_timestamp", Date.now().toString())
-  }
-
-  // Função para limpar dados de autenticação
-  const clearAuthData = () => {
-    setToken(null)
-    setUser(null)
-    localStorage.removeItem("access_token")
-    localStorage.removeItem("user")
-    localStorage.removeItem("auth_timestamp")
-  }
-
-  // Função para verificar se a sessão ainda é válida
-  const isSessionValid = () => {
-    const timestamp = localStorage.getItem("auth_timestamp")
-    if (!timestamp) return false
-
-    const sessionAge = Date.now() - Number.parseInt(timestamp)
-    const maxAge = 24 * 60 * 60 * 1000 // 24 horas
-
-    return sessionAge < maxAge
-  }
+  const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const savedToken = localStorage.getItem("access_token")
-        const savedUser = localStorage.getItem("user")
-
-        if (savedToken && savedUser && isSessionValid()) {
-          const userData = JSON.parse(savedUser)
-          setToken(savedToken)
-          setUser(userData)
-
-          // Tentar validar o token com o backend (opcional)
-          try {
-            const response = await fetch(`${apiUrl}/api/v1/users/me`, {
-              headers: {
-                Authorization: `Bearer ${savedToken}`,
-              },
-            })
-
-            if (response.ok) {
-              const currentUser = await response.json()
-              // Atualizar com dados mais recentes do servidor
-              saveAuthData(savedToken, currentUser)
-            }
-          } catch (error) {
-            console.log("Não foi possível validar com o servidor, usando dados locais")
+    const token = localStorage.getItem("access_token")
+    if (token) {
+      // Verificar se o token ainda é válido
+      fetch(`${apiUrl}/api/v1/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => {
+          if (res.ok) {
+            return res.json()
           }
-        } else {
-          // Sessão expirada ou inválida
-          clearAuthData()
-        }
-      } catch (error) {
-        console.error("Erro ao inicializar autenticação:", error)
-        clearAuthData()
-      } finally {
-        setLoading(false)
-      }
+          throw new Error("Token inválido")
+        })
+        .then((userData) => {
+          setUser(userData)
+          setIsAuthenticated(true)
+        })
+        .catch(() => {
+          localStorage.removeItem("access_token")
+          setUser(null)
+          setIsAuthenticated(false)
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    } else {
+      setLoading(false)
     }
-
-    initializeAuth()
   }, [apiUrl])
 
-  const login = async (credentials: { username: string; password: string }) => {
+  const login = async (credentials: { username: string; email?: string | null; password: string }) => {
     try {
       const response = await fetch(`${apiUrl}/api/v1/auth/login`, {
         method: "POST",
@@ -128,82 +79,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Falha no login")
+        const errorData = await response.json()
+        throw new Error(errorData.detail || "Erro ao fazer login")
       }
 
       const data = await response.json()
-      saveAuthData(data.access_token, data.user)
 
-      // Redirecionar baseado no role do usuário
-      if (data.user.role === "platform_admin") {
-        router.push("/platform/dashboard")
-      } else if (data.user.role === "admin") {
-        router.push("/admin/dashboard")
-      } else {
-        router.push("/dashboard")
-      }
+      localStorage.setItem("access_token", data.access_token)
+      setUser(data.user)
+      setIsAuthenticated(true)
     } catch (error) {
+      console.error("Erro no login:", error)
       throw error
     }
   }
 
   const loginWithToken = (data: { token: string; user: User }) => {
-    saveAuthData(data.token, data.user)
-  }
-
-  const updateUser = (userData: User) => {
-    setUser(userData)
-    localStorage.setItem("user", JSON.stringify(userData))
-  }
-
-  const register = async (data: any) => {
-    try {
-      const response = await fetch(`${apiUrl}/api/v1/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Falha no registro")
-      }
-
-      const result = await response.json()
-      saveAuthData(result.access_token, result.user)
-
-      router.push("/dashboard")
-    } catch (error) {
-      throw error
-    }
+    localStorage.setItem("access_token", data.token)
+    setUser(data.user)
+    setIsAuthenticated(true)
   }
 
   const logout = () => {
-    clearAuthData()
-    router.push("/login")
+    localStorage.removeItem("access_token")
+    setUser(null)
+    setIsAuthenticated(false)
   }
 
-  const value = {
-    user,
-    token,
-    login,
-    loginWithToken,
-    logout,
-    register,
-    updateUser,
-    loading,
-    isAuthenticated: !!user && !!token,
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      setUser({ ...user, ...userData })
+    }
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        loading,
+        login,
+        loginWithToken,
+        logout,
+        updateUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (!context) {
+  if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider")
   }
   return context

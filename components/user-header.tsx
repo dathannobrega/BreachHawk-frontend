@@ -1,132 +1,235 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Bell, Search, Settings, LogOut } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { useAuth } from "@/contexts/auth-context"
+import { useLanguage } from "@/contexts/language-context"
+import { User, Settings, LogOut, Bell, Search, Globe, ChevronDown, Shield } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-export default function UserHeader() {
+interface UserHeaderProps {
+  breadcrumbs?: Array<{
+    label: string
+    href?: string
+  }>
+}
+
+export function UserHeader({ breadcrumbs = [] }: UserHeaderProps) {
+  const [isSearchFocused, setIsSearchFocused] = useState(false)
   const { user, logout } = useAuth()
+  const { language, setLanguage } = useLanguage()
   const router = useRouter()
 
-  if (!user) return null
-
-  const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
-
-  const getInitials = () => {
-    if (user.first_name && user.last_name) {
-      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
-    }
-    if (user.username) {
-      return user.username.slice(0, 2).toUpperCase()
-    }
-    return user.email.slice(0, 2).toUpperCase()
+  const handleLogout = async () => {
+    await logout()
+    router.push("/login")
   }
 
-  const getDisplayName = () => {
+  const getUserDisplayName = () => {
+    if (!user) return "Usuário"
     if (user.first_name && user.last_name) {
       return `${user.first_name} ${user.last_name}`
     }
-    return user.username || user.email
+    if (user.first_name) return user.first_name
+    if (user.username) return user.username
+    return "Usuário"
   }
 
-  const getRoleLabel = () => {
-    switch (user.role) {
+  const getUserInitials = () => {
+    if (!user) return "U"
+    if (user.first_name && user.last_name) {
+      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
+    }
+    if (user.first_name) return user.first_name[0].toUpperCase()
+    if (user.username) return user.username[0].toUpperCase()
+    return "U"
+  }
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
       case "platform_admin":
-        return "Platform Admin"
+        return "bg-purple-100 text-purple-800"
       case "admin":
-        return "Admin"
+        return "bg-blue-100 text-blue-800"
+      default:
+        return "bg-slate-100 text-slate-800"
+    }
+  }
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "platform_admin":
+        return "Admin Plataforma"
+      case "admin":
+        return "Administrador"
       default:
         return "Usuário"
     }
   }
 
-  const getProfileImageSrc = (size = 40) => {
-    if (!user.profile_image) return `/placeholder.svg?height=${size}&width=${size}`
-
-    // Se for base64, usar diretamente
-    if (user.profile_image.startsWith("data:")) {
-      return user.profile_image
-    }
-
-    // Se for uma URL relativa do backend, construir URL completa
-    if (user.profile_image.startsWith("/static/")) {
-      return `${apiUrl}${user.profile_image}`
-    }
-
-    // Se for uma URL completa, usar diretamente
-    return user.profile_image
-  }
-
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-40 h-16">
-      <div className="px-6 h-full">
-        <div className="flex justify-between items-center h-full">
-          {/* Page Title Area */}
-          <div className="flex-1">
-            <h1 className="text-xl font-semibold text-gray-900">{/* Título será definido por cada página */}</h1>
-          </div>
-
-          {/* Right side - Actions and User Menu */}
-          <div className="flex items-center space-x-4">
-            {/* Search */}
-            <Button variant="ghost" size="sm" onClick={() => router.push("/search")}>
-              <Search className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Pesquisar</span>
-            </Button>
-
-            {/* Notifications */}
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="h-4 w-4" />
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
-            </Button>
-
-            {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={getProfileImageSrc(40) || "/placeholder.svg"} alt={getDisplayName()} />
-                    <AvatarFallback className="bg-blue-500 text-white">{getInitials()}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-64 bg-white" align="end" forceMount>
-                <div className="flex items-center justify-start gap-3 p-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={getProfileImageSrc(48) || "/placeholder.svg"} alt={getDisplayName()} />
-                    <AvatarFallback className="bg-blue-500 text-white">{getInitials()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col space-y-1 leading-none">
-                    <p className="font-medium text-sm">{getDisplayName()}</p>
-                    <p className="text-xs text-muted-foreground truncate max-w-[150px]">{user.email}</p>
-                    <Badge variant="secondary" className="w-fit text-xs">
-                      {getRoleLabel()}
-                    </Badge>
+    <header className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
+      <div className="flex h-16 items-center justify-between px-4 lg:px-6">
+        {/* Left Section - Breadcrumbs */}
+        <div className="flex items-center space-x-4 flex-1 lg:ml-0 ml-16">
+          {breadcrumbs.length > 0 && (
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/dashboard" className="flex items-center hover:text-blue-600">
+                    <Shield className="h-4 w-4" />
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                {breadcrumbs.map((crumb, index) => (
+                  <div key={index} className="flex items-center">
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      {crumb.href && index < breadcrumbs.length - 1 ? (
+                        <BreadcrumbLink href={crumb.href} className="hover:text-blue-600">
+                          {crumb.label}
+                        </BreadcrumbLink>
+                      ) : (
+                        <BreadcrumbPage className="text-slate-900 font-medium">{crumb.label}</BreadcrumbPage>
+                      )}
+                    </BreadcrumbItem>
                   </div>
+                ))}
+              </BreadcrumbList>
+            </Breadcrumb>
+          )}
+        </div>
+
+        {/* Center Section - Search */}
+        <div className="hidden md:flex items-center flex-1 max-w-md mx-4">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Pesquisar vazamentos, domínios..."
+              className={cn(
+                "w-full pl-10 pr-4 py-2 text-sm border border-slate-200 rounded-lg transition-all duration-200",
+                "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                "placeholder:text-slate-400",
+                isSearchFocused && "shadow-lg",
+              )}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+            />
+          </div>
+        </div>
+
+        {/* Right Section - Actions & User Menu */}
+        <div className="flex items-center space-x-3">
+          {/* Language Selector */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-9 w-9 p-0 hover:bg-slate-100">
+                <Globe className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Idioma</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setLanguage("pt")}
+                className={language === "pt" ? "bg-blue-50 text-blue-900" : ""}
+              >
+                🇧🇷 Português
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setLanguage("en")}
+                className={language === "en" ? "bg-blue-50 text-blue-900" : ""}
+              >
+                🇺🇸 English
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Notifications */}
+          <Button variant="ghost" size="sm" className="h-9 w-9 p-0 relative hover:bg-slate-100">
+            <Bell className="h-4 w-4" />
+            <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
+              3
+            </span>
+          </Button>
+
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-9 px-2 space-x-2 hover:bg-slate-100">
+                <Avatar className="h-7 w-7">
+                  {user?.profile_image ? (
+                    <AvatarImage
+                      src={user.profile_image || "/placeholder.svg"}
+                      alt={getUserDisplayName()}
+                      className="object-cover"
+                    />
+                  ) : (
+                    <AvatarFallback className="text-xs bg-blue-100 text-blue-700 font-medium">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="hidden md:flex flex-col items-start">
+                  <span className="text-sm font-medium text-slate-900">{getUserDisplayName()}</span>
+                  <Badge variant="secondary" className={cn("text-xs", getRoleColor(user?.role || "user"))}>
+                    {getRoleLabel(user?.role || "user")}
+                  </Badge>
                 </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/settings")}>
+                <ChevronDown className="h-3 w-3 text-slate-500" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">{getUserDisplayName()}</p>
+                  <p className="text-xs text-slate-500">{user?.email}</p>
+                  {user?.company && <p className="text-xs text-slate-500">{user.company}</p>}
+                  <Badge variant="secondary" className={cn("text-xs w-fit", getRoleColor(user?.role || "user"))}>
+                    {getRoleLabel(user?.role || "user")}
+                  </Badge>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="flex items-center">
+                  <User className="mr-2 h-4 w-4" />
+                  Perfil
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="flex items-center">
                   <Settings className="mr-2 h-4 w-4" />
                   Configurações
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-red-600">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sair
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

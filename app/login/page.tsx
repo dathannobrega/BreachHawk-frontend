@@ -6,22 +6,22 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Shield, User, Lock, Chrome, Globe } from "lucide-react"
+import { FormField } from "@/components/ui/form-field"
+import { StatusMessage } from "@/components/ui/status-message"
+import { AuthLayout } from "@/components/templates/auth-layout"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useAuth } from "@/contexts/auth-context"
 import { useLanguage } from "@/contexts/language-context"
+import { Mail, Lock, Eye, EyeOff, Chrome } from "lucide-react"
 
 export default function LoginPage() {
-  // Todos os hooks devem ser chamados no início do componente, antes de qualquer lógica condicional
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   })
+  const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
   const [isLanguageContextReady, setIsLanguageContextReady] = useState(false)
 
   const { login, loginWithToken, isAuthenticated } = useAuth()
@@ -42,7 +42,7 @@ export default function LoginPage() {
   useEffect(() => {
     const token = searchParams.get("token")
     if (token) {
-      // Fazer request para obter dados do usuário
+      setIsLoading(true)
       fetch(`${apiUrl}/api/v1/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -54,6 +54,9 @@ export default function LoginPage() {
         })
         .catch(() => {
           setError(language === "pt" ? "Erro ao fazer login com Google" : "Error signing in with Google")
+        })
+        .finally(() => {
+          setIsLoading(false)
         })
     }
   }, [searchParams, loginWithToken, apiUrl, language])
@@ -73,17 +76,25 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
     setError("")
-    setLoading(true)
 
     try {
-      await login(formData)
+      // Ajustar dados para corresponder ao formato esperado pela API
+      const loginData = {
+        username: formData.username, // Pode ser email ou username
+        email: formData.username.includes("@") ? formData.username : null,
+        password: formData.password,
+      }
+
+      await login(loginData)
+      router.push("/dashboard")
     } catch (err: any) {
       setError(
         err.message || (language === "pt" ? "Erro ao fazer login. Tente novamente." : "Login error. Please try again."),
       )
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -91,132 +102,123 @@ export default function LoginPage() {
     window.location.href = `${apiUrl}/api/v1/auth/login/google`
   }
 
-  const toggleLanguage = () => {
-    setLanguage(language === "pt" ? "en" : "pt")
-  }
-
-  // Renderização condicional após todos os hooks
+  // Loading state
   if (!isLanguageContextReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                <div className="h-10 bg-gray-200 rounded"></div>
-              </div>
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                <div className="h-10 bg-gray-200 rounded"></div>
-              </div>
-              <div className="h-10 bg-gray-200 rounded"></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthLayout title="BreachHawk" description="Carregando...">
+        <div className="flex items-center justify-center py-12">
+          <LoadingSpinner size="lg" />
+        </div>
+      </AuthLayout>
     )
   }
 
-  // Renderização principal
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Shield className="h-8 w-8 text-blue-600 mr-2" />
-              <CardTitle className="text-2xl font-bold">{t.auth.login.title}</CardTitle>
-            </div>
-            <Button variant="ghost" size="sm" onClick={toggleLanguage} className="h-8 w-12">
-              <Globe className="h-4 w-4 mr-1" />
-              {language === "pt" ? "EN" : "PT"}
-            </Button>
-          </div>
-          <CardDescription className="text-center text-gray-600">{t.auth.login.subtitle}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+    <AuthLayout title={t.auth.login.title} description={t.auth.login.subtitle}>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && <StatusMessage type="error" message={error} onClose={() => setError("")} />}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username" className="flex items-center gap-2 text-sm font-medium">
-                <User className="h-4 w-4" />
-                {t.auth.login.username}
-              </Label>
-              <Input
-                id="username"
-                name="username"
-                type="text"
-                value={formData.username}
-                onChange={handleChange}
-                placeholder={t.auth.login.usernamePlaceholder}
-                required
-                className="h-11"
-              />
-            </div>
+        <FormField
+          label={t.auth.login.username}
+          type="text"
+          name="username"
+          value={formData.username}
+          onChange={handleChange}
+          placeholder={t.auth.login.usernamePlaceholder}
+          icon={Mail}
+          required
+          disabled={isLoading}
+        />
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="flex items-center gap-2 text-sm font-medium">
-                <Lock className="h-4 w-4" />
-                {t.auth.login.password}
-              </Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder={t.auth.login.passwordPlaceholder}
-                required
-                className="h-11"
-              />
-            </div>
-
-            <Button type="submit" className="w-full h-11 bg-blue-600 hover:bg-blue-700" disabled={loading}>
-              {loading ? t.auth.login.loggingIn : t.auth.login.loginButton}
-            </Button>
-
-            <div className="text-center">
-              <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                {t.auth.login.forgotPassword}
-              </Link>
-            </div>
-          </form>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500">{t.auth.login.or}</span>
-            </div>
-          </div>
+        <div className="space-y-2">
+          <FormField
+            label={t.auth.login.password}
+            type={showPassword ? "text" : "password"}
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder={t.auth.login.passwordPlaceholder}
+            icon={Lock}
+            required
+            disabled={isLoading}
+          />
 
           <Button
             type="button"
-            variant="outline"
-            className="w-full h-11 border-gray-300 hover:bg-gray-50"
-            onClick={handleGoogleLogin}
+            variant="ghost"
+            size="sm"
+            className="h-auto p-0 text-xs text-slate-500 hover:text-slate-700"
+            onClick={() => setShowPassword(!showPassword)}
+            disabled={isLoading}
           >
-            <Chrome className="h-4 w-4 mr-2" />
-            {t.auth.login.googleLogin}
+            {showPassword ? (
+              <>
+                <EyeOff className="w-3 h-3 mr-1" />
+                {language === "pt" ? "Ocultar senha" : "Hide password"}
+              </>
+            ) : (
+              <>
+                <Eye className="w-3 h-3 mr-1" />
+                {language === "pt" ? "Mostrar senha" : "Show password"}
+              </>
+            )}
           </Button>
+        </div>
 
-          <div className="text-center text-sm pt-4">
-            <span className="text-gray-600">{t.auth.login.noAccount} </span>
-            <Link href="/register" className="text-blue-600 hover:underline font-medium">
-              {t.auth.login.register}
-            </Link>
+        <div className="flex items-center justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors focus-ring rounded"
+          >
+            {t.auth.login.forgotPassword}
+          </Link>
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full h-12 text-base font-medium"
+          disabled={isLoading || !formData.username || !formData.password}
+        >
+          {isLoading ? (
+            <>
+              <LoadingSpinner size="sm" className="mr-2" />
+              {t.auth.login.loggingIn}
+            </>
+          ) : (
+            t.auth.login.loginButton
+          )}
+        </Button>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-200" />
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-white px-4 text-slate-500 font-medium">{t.auth.login.or}</span>
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-12 border-slate-300 hover:bg-slate-50 transition-smooth focus-ring"
+          onClick={handleGoogleLogin}
+          disabled={isLoading}
+        >
+          <Chrome className="h-5 w-5 mr-3" />
+          {t.auth.login.googleLogin}
+        </Button>
+
+        <div className="text-center pt-4">
+          <span className="text-slate-600">{t.auth.login.noAccount} </span>
+          <Link
+            href="/register"
+            className="text-primary-600 hover:text-primary-700 font-semibold transition-colors focus-ring rounded"
+          >
+            {t.auth.login.register}
+          </Link>
+        </div>
+      </form>
+    </AuthLayout>
   )
 }
