@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,9 @@ import { StatusMessage } from "@/components/ui/status-message"
 import { AuthLayout } from "@/components/templates/auth-layout"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { User, Mail, Lock, Building, Eye, EyeOff } from "lucide-react"
+import PasswordValidator from "@/components/ui/password-validator"
+import { passwordPolicyService } from "@/services/password-policy-service"
+import type { PasswordPolicyRead } from "@/types/password-policy"
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -25,22 +28,60 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicyRead | null>(null)
+  const [loadingPolicy, setLoadingPolicy] = useState(true)
 
   const router = useRouter()
+  const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+
+  // Carregar política de senhas pública
+  useEffect(() => {
+    const loadPasswordPolicy = async () => {
+      try {
+        const policy = await passwordPolicyService.getPublicPolicy()
+        setPasswordPolicy(policy)
+      } catch (error) {
+        console.error("Erro ao carregar política de senhas:", error)
+        // Usar política padrão se não conseguir carregar
+        setPasswordPolicy({
+          min_length: 8,
+          require_uppercase: true,
+          require_lowercase: true,
+          require_numbers: true,
+          require_symbols: true,
+        })
+      } finally {
+        setLoadingPolicy(false)
+      }
+    }
+
+    loadPasswordPolicy()
+  }, [])
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   const validateForm = () => {
+    // Validar se as senhas coincidem
     if (formData.password !== formData.confirmPassword) {
       setError("As senhas não coincidem")
       return false
     }
-    if (formData.password.length < 8) {
+
+    // Validar senha contra a política
+    if (passwordPolicy) {
+      const validation = passwordPolicyService.validatePassword(formData.password, passwordPolicy)
+      if (!validation.isValid) {
+        setError(validation.errors[0])
+        return false
+      }
+    } else if (formData.password.length < 8) {
+      // Fallback se não tiver política
       setError("A senha deve ter pelo menos 8 caracteres")
       return false
     }
+
     return true
   }
 
@@ -54,7 +95,7 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/register`, {
+      const response = await fetch(`${apiUrl}/api/v1/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -136,7 +177,6 @@ export default function RegisterPage() {
               icon={Lock}
               required
               disabled={isLoading}
-              description="Mínimo de 8 caracteres"
             />
 
             <Button
@@ -159,6 +199,11 @@ export default function RegisterPage() {
                 </>
               )}
             </Button>
+
+            {/* Validador de senha em tempo real */}
+            {passwordPolicy && !loadingPolicy && formData.password && (
+              <PasswordValidator password={formData.password} policy={passwordPolicy} />
+            )}
           </div>
 
           <div className="space-y-2">
