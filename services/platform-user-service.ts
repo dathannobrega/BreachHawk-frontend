@@ -1,4 +1,5 @@
 import type { PlatformUser, PlatformUserCreate, PlatformUserUpdate, UserStats } from "@/types/platform-user"
+import type { LoginHistoryRead, UserSessionRead } from "@/types/auth"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
@@ -34,6 +35,14 @@ class PlatformUserService {
 
   async getUser(id: number): Promise<PlatformUser> {
     return this.makeRequest<PlatformUser>(`/${id}`)
+  }
+
+  async getUserLoginHistory(id: number): Promise<LoginHistoryRead[]> {
+    return this.makeRequest<LoginHistoryRead[]>(`/${id}/login-history`)
+  }
+
+  async getUserSessions(id: number): Promise<UserSessionRead[]> {
+    return this.makeRequest<UserSessionRead[]>(`/${id}/sessions`)
   }
 
   async createUser(data: PlatformUserCreate): Promise<PlatformUser> {
@@ -168,6 +177,59 @@ class PlatformUserService {
     })
 
     return cleaned
+  }
+
+  // Métodos utilitários para histórico de login e sessões
+  parseDevice(device?: string | null): { browser: string; os: string; icon: string } {
+    if (!device) return { browser: "Desconhecido", os: "Desconhecido", icon: "Monitor" }
+
+    const browser = device.includes("Chrome")
+      ? "Chrome"
+      : device.includes("Firefox")
+        ? "Firefox"
+        : device.includes("Safari")
+          ? "Safari"
+          : device.includes("Edge")
+            ? "Edge"
+            : "Desconhecido"
+
+    const os = device.includes("Windows")
+      ? "Windows"
+      : device.includes("macOS")
+        ? "macOS"
+        : device.includes("Linux")
+          ? "Linux"
+          : device.includes("Android")
+            ? "Android"
+            : device.includes("iOS")
+              ? "iOS"
+              : "Desconhecido"
+
+    const icon =
+      device.includes("Mobile") || device.includes("Android") || device.includes("iOS") ? "Smartphone" : "Monitor"
+
+    return { browser, os, icon }
+  }
+
+  isSessionExpired(session: UserSessionRead): boolean {
+    if (!session.expires_at) return false
+    return new Date(session.expires_at) < new Date()
+  }
+
+  getLoginStatusColor(success: boolean): string {
+    return success ? "text-green-600" : "text-red-600"
+  }
+
+  getLoginStatusIcon(success: boolean): string {
+    return success ? "CheckCircle" : "XCircle"
+  }
+
+  getSessionStatusColor(session: UserSessionRead): string {
+    return this.isSessionExpired(session) ? "text-red-600" : "text-green-600"
+  }
+
+  getSessionStatusText(session: UserSessionRead): string {
+    return this.isSessionExpired(session) ? "Expirada" : "Ativa"
   }
 }
 

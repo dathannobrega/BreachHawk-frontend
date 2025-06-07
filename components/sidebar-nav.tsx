@@ -26,6 +26,8 @@ import {
   AlertTriangle,
   BarChart3,
   UserCheck,
+  Cog,
+  Package,
 } from "lucide-react"
 
 interface NavItem {
@@ -98,9 +100,21 @@ const navigationItems: NavItem[] = [
     roles: ["platform_admin"],
   },
   {
+    title: "Planos",
+    href: "/platform/plans",
+    icon: Package,
+    roles: ["platform_admin"],
+  },
+  {
     title: "Faturamento",
     href: "/platform/billing",
     icon: CreditCard,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Configurações da Plataforma",
+    href: "/platform/settings",
+    icon: Cog,
     roles: ["platform_admin"],
   },
   // Comum a todos
@@ -284,8 +298,6 @@ export function SidebarNav({ onCollapseChange }: SidebarNavProps) {
         ) : (
           <div className="flex justify-center">
             <Avatar className="h-10 w-10">
-              {" "}
-              {/* Avatar maior quando colapsado */}
               {user?.profile_image ? (
                 <AvatarImage
                   src={user.profile_image || "/placeholder.svg"}

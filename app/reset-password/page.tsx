@@ -1,5 +1,7 @@
 "use client"
 
+import { cn } from "@/lib/utils"
+
 import type React from "react"
 
 import { useState, useEffect } from "react"
@@ -10,8 +12,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Shield, Lock, Check, Globe } from "lucide-react"
+import { Shield, Lock, Check, Globe, Eye, EyeOff } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
+import PasswordValidator from "@/components/ui/password-validator"
+import { passwordPolicyService } from "@/services/password-policy-service"
+import type { PasswordPolicyRead } from "@/types/password-policy"
 
 export default function ResetPasswordPage() {
   const [formData, setFormData] = useState({
@@ -22,6 +27,10 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [token, setToken] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicyRead | null>(null)
+  const [loadingPolicy, setLoadingPolicy] = useState(true)
 
   const { language, setLanguage, t } = useLanguage()
   const router = useRouter()
@@ -36,6 +45,30 @@ export default function ResetPasswordPage() {
       setErrors({ token: t?.auth?.resetPassword?.errors?.invalidToken || "Invalid Token" })
     }
   }, [searchParams, t])
+
+  // Carregar política de senhas pública
+  useEffect(() => {
+    const loadPasswordPolicy = async () => {
+      try {
+        const policy = await passwordPolicyService.getPublicPolicy()
+        setPasswordPolicy(policy)
+      } catch (error) {
+        console.error("Erro ao carregar política de senhas:", error)
+        // Usar política padrão se não conseguir carregar
+        setPasswordPolicy({
+          min_length: 8,
+          require_uppercase: true,
+          require_lowercase: true,
+          require_numbers: true,
+          require_symbols: true,
+        })
+      } finally {
+        setLoadingPolicy(false)
+      }
+    }
+
+    loadPasswordPolicy()
+  }, [])
 
   // Verificação de segurança para garantir que t está disponível
   if (!t || !t.auth || !t.auth.resetPassword) {
@@ -72,10 +105,20 @@ export default function ResetPasswordPage() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-    if (!formData.password) newErrors.password = t.auth.resetPassword.errors.passwordRequired
+
+    if (!formData.password) {
+      newErrors.password = t.auth.resetPassword.errors.passwordRequired
+    } else if (passwordPolicy) {
+      const validation = passwordPolicyService.validatePassword(formData.password, passwordPolicy)
+      if (!validation.isValid) {
+        newErrors.password = validation.errors[0]
+      }
+    }
+
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = t.auth.resetPassword.errors.passwordMismatch
     }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -145,7 +188,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-lg">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
@@ -162,8 +205,9 @@ export default function ResetPasswordPage() {
         <CardContent>
           {success ? (
             <div className="space-y-4">
-              <Alert>
-                <AlertDescription>{t.auth.resetPassword.success}</AlertDescription>
+              <Alert className="border-green-200 bg-green-50">
+                <Check className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">{t.auth.resetPassword.success}</AlertDescription>
               </Alert>
               <div className="text-center text-sm text-muted-foreground">
                 {language === "pt" ? "Redirecionando para o login..." : "Redirecting to login..."}
@@ -177,22 +221,42 @@ export default function ResetPasswordPage() {
                 </Alert>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="password" className="flex items-center gap-2">
                     <Lock className="h-4 w-4" />
                     {t.auth.resetPassword.password}
                   </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder={t.auth.resetPassword.passwordPlaceholder}
-                    className={errors.password ? "border-red-500" : ""}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder={t.auth.resetPassword.passwordPlaceholder}
+                      className={cn("pr-10", errors.password ? "border-red-500" : "")}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-10 px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-gray-400" />
+                      )}
+                    </Button>
+                  </div>
                   {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+
+                  {/* Validador de senha em tempo real */}
+                  {passwordPolicy && !loadingPolicy && (
+                    <PasswordValidator password={formData.password} policy={passwordPolicy} />
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -200,22 +264,43 @@ export default function ResetPasswordPage() {
                     <Check className="h-4 w-4" />
                     {t.auth.resetPassword.confirmPassword}
                   </Label>
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder={t.auth.resetPassword.confirmPasswordPlaceholder}
-                    className={errors.confirmPassword ? "border-red-500" : ""}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder={t.auth.resetPassword.confirmPasswordPlaceholder}
+                      className={cn("pr-10", errors.confirmPassword ? "border-red-500" : "")}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-10 px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-gray-400" />
+                      )}
+                    </Button>
+                  </div>
                   {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
                 </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading || loadingPolicy}>
                   {loading ? t.auth.resetPassword.resetting : t.auth.resetPassword.reset}
                 </Button>
               </form>
+
+              <div className="mt-6 text-center">
+                <Link href="/login" className="text-sm text-blue-600 hover:underline">
+                  {language === "pt" ? "Voltar ao login" : "Back to login"}
+                </Link>
+              </div>
             </>
           )}
         </CardContent>

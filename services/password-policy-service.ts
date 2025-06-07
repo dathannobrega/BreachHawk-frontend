@@ -23,8 +23,29 @@ class PasswordPolicyService {
     return response.json()
   }
 
+  private async makePublicRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/password-policy${endpoint}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+      },
+      ...options,
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  }
+
   async getPolicy(): Promise<PasswordPolicyRead> {
     return this.makeRequest<PasswordPolicyRead>("/")
+  }
+
+  async getPublicPolicy(): Promise<PasswordPolicyRead> {
+    return this.makePublicRequest<PasswordPolicyRead>("/public")
   }
 
   async updatePolicy(policy: PasswordPolicyUpdate): Promise<PasswordPolicyRead> {
@@ -61,6 +82,17 @@ class PasswordPolicyService {
     return {
       isValid: errors.length === 0,
       errors,
+    }
+  }
+
+  // Método para validar requisitos individuais
+  validateRequirements(password: string, policy: PasswordPolicyRead) {
+    return {
+      minLength: password.length >= policy.min_length,
+      uppercase: !policy.require_uppercase || /[A-Z]/.test(password),
+      lowercase: !policy.require_lowercase || /[a-z]/.test(password),
+      numbers: !policy.require_numbers || /\d/.test(password),
+      symbols: !policy.require_symbols || /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
     }
   }
 
