@@ -28,15 +28,15 @@ class AuthService {
   }
 
   async getLoginHistory(): Promise<LoginHistoryRead[]> {
-    return this.makeRequest<LoginHistoryRead[]>("/api/v1/auth/login-history")
+    return this.makeRequest<LoginHistoryRead[]>("api/accounts/login-history/")
   }
 
   async getSessions(): Promise<UserSessionRead[]> {
-    return this.makeRequest<UserSessionRead[]>("/api/v1/auth/sessions")
+    return this.makeRequest<UserSessionRead[]>("api/accounts/sessions/")
   }
 
   async deleteSession(sessionId: number): Promise<{ success: boolean }> {
-    return this.makeRequest<{ success: boolean }>(`/api/v1/auth/sessions/${sessionId}`, {
+    return this.makeRequest<{ success: boolean }>(`api/accounts/sessions/${sessionId}`, {
       method: "DELETE",
     })
   }

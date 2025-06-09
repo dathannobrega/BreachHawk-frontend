@@ -18,6 +18,7 @@ import type { PasswordPolicyRead } from "@/types/password-policy"
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     name: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -95,13 +96,14 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${apiUrl}/api/v1/auth/register`, {
+      const response = await fetch(`${apiUrl}/api/accounts/register/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           name: formData.name,
+          username: formData.username,
           email: formData.email,
           password: formData.password,
           company: formData.company,
@@ -127,152 +129,163 @@ export default function RegisterPage() {
   const isFormValid = Object.values(formData).every((value) => value.trim() !== "")
 
   return (
-    <AuthLayout title="Criar conta" description="Junte-se à plataforma de threat intelligence">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && <StatusMessage type="error" message={error} onClose={() => setError("")} />}
+      <AuthLayout title="Criar conta" description="Junte-se à plataforma de threat intelligence">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && <StatusMessage type="error" message={error} onClose={() => setError("")} />}
 
-        {success && <StatusMessage type="success" message={success} />}
+          {success && <StatusMessage type="success" message={success} />}
 
-        <div className="grid grid-cols-1 gap-4">
-          <FormField
-            label="Nome completo"
-            type="text"
-            value={formData.name}
-            onChange={(e) => handleChange("name", e.target.value)}
-            placeholder="Seu nome completo"
-            icon={User}
-            required
-            disabled={isLoading}
-          />
-
-          <FormField
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleChange("email", e.target.value)}
-            placeholder="seu@email.com"
-            icon={Mail}
-            required
-            disabled={isLoading}
-          />
-
-          <FormField
-            label="Empresa"
-            type="text"
-            value={formData.company}
-            onChange={(e) => handleChange("company", e.target.value)}
-            placeholder="Nome da sua empresa"
-            icon={Building}
-            required
-            disabled={isLoading}
-          />
-
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-4">
             <FormField
-              label="Senha"
-              type={showPassword ? "text" : "password"}
-              value={formData.password}
-              onChange={(e) => handleChange("password", e.target.value)}
-              placeholder="••••••••"
-              icon={Lock}
-              required
-              disabled={isLoading}
+                label="Nome completo"
+                type="text"
+                value={formData.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                placeholder="Seu nome completo"
+                icon={User}
+                required
+                disabled={isLoading}
             />
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-auto p-0 text-xs text-slate-500 hover:text-slate-700"
-              onClick={() => setShowPassword(!showPassword)}
-              disabled={isLoading}
-            >
-              {showPassword ? (
-                <>
-                  <EyeOff className="w-3 h-3 mr-1" />
-                  Ocultar senha
-                </>
-              ) : (
-                <>
-                  <Eye className="w-3 h-3 mr-1" />
-                  Mostrar senha
-                </>
-              )}
-            </Button>
+            <FormField
+                label="Usuário"
+                type="text"
+                value={formData.username}
+                onChange={(e) => handleChange("username", e.target.value)}
+                placeholder="Seu nome de usuário"
+                icon={User}
+                required
+                disabled={isLoading}
+            />
 
-            {/* Validador de senha em tempo real */}
-            {passwordPolicy && !loadingPolicy && formData.password && (
-              <PasswordValidator password={formData.password} policy={passwordPolicy} />
+            <FormField
+                label="Email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleChange("email", e.target.value)}
+                placeholder="seu@email.com"
+                icon={Mail}
+                required
+                disabled={isLoading}
+            />
+
+            <FormField
+                label="Empresa"
+                type="text"
+                value={formData.company}
+                onChange={(e) => handleChange("company", e.target.value)}
+                placeholder="Nome da sua empresa"
+                icon={Building}
+                required
+                disabled={isLoading}
+            />
+
+            <div className="space-y-2">
+              <FormField
+                  label="Senha"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(e) => handleChange("password", e.target.value)}
+                  placeholder="••••••••"
+                  icon={Lock}
+                  required
+                  disabled={isLoading}
+              />
+
+              <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-0 text-xs text-slate-500 hover:text-slate-700"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+              >
+                {showPassword ? (
+                    <>
+                      <EyeOff className="w-3 h-3 mr-1" />
+                      Ocultar senha
+                    </>
+                ) : (
+                    <>
+                      <Eye className="w-3 h-3 mr-1" />
+                      Mostrar senha
+                    </>
+                )}
+              </Button>
+
+              {/* Validador de senha em tempo real */}
+              {passwordPolicy && !loadingPolicy && formData.password && (
+                  <PasswordValidator password={formData.password} policy={passwordPolicy} />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <FormField
+                  label="Confirmar senha"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                  placeholder="••••••••"
+                  icon={Lock}
+                  required
+                  disabled={isLoading}
+              />
+
+              <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-0 text-xs text-slate-500 hover:text-slate-700"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={isLoading}
+              >
+                {showConfirmPassword ? (
+                    <>
+                      <EyeOff className="w-3 h-3 mr-1" />
+                      Ocultar senha
+                    </>
+                ) : (
+                    <>
+                      <Eye className="w-3 h-3 mr-1" />
+                      Mostrar senha
+                    </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full h-12 text-base font-medium" disabled={isLoading || !isFormValid}>
+            {isLoading ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  Criando conta...
+                </>
+            ) : (
+                "Criar conta"
             )}
-          </div>
+          </Button>
 
-          <div className="space-y-2">
-            <FormField
-              label="Confirmar senha"
-              type={showConfirmPassword ? "text" : "password"}
-              value={formData.confirmPassword}
-              onChange={(e) => handleChange("confirmPassword", e.target.value)}
-              placeholder="••••••••"
-              icon={Lock}
-              required
-              disabled={isLoading}
-            />
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-auto p-0 text-xs text-slate-500 hover:text-slate-700"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              disabled={isLoading}
+          <div className="text-center text-sm text-slate-600">
+            Já tem uma conta?{" "}
+            <Link
+                href="/login"
+                className="text-primary-600 hover:text-primary-700 font-medium transition-colors focus-ring rounded"
             >
-              {showConfirmPassword ? (
-                <>
-                  <EyeOff className="w-3 h-3 mr-1" />
-                  Ocultar senha
-                </>
-              ) : (
-                <>
-                  <Eye className="w-3 h-3 mr-1" />
-                  Mostrar senha
-                </>
-              )}
-            </Button>
+              Faça login
+            </Link>
           </div>
-        </div>
 
-        <Button type="submit" className="w-full h-12 text-base font-medium" disabled={isLoading || !isFormValid}>
-          {isLoading ? (
-            <>
-              <LoadingSpinner size="sm" className="mr-2" />
-              Criando conta...
-            </>
-          ) : (
-            "Criar conta"
-          )}
-        </Button>
-
-        <div className="text-center text-sm text-slate-600">
-          Já tem uma conta?{" "}
-          <Link
-            href="/login"
-            className="text-primary-600 hover:text-primary-700 font-medium transition-colors focus-ring rounded"
-          >
-            Faça login
-          </Link>
-        </div>
-
-        <div className="text-xs text-slate-500 text-center">
-          Ao criar uma conta, você concorda com nossos{" "}
-          <Link href="/terms" className="text-primary-600 hover:text-primary-700">
-            Termos de Uso
-          </Link>{" "}
-          e{" "}
-          <Link href="/privacy" className="text-primary-600 hover:text-primary-700">
-            Política de Privacidade
-          </Link>
-        </div>
-      </form>
-    </AuthLayout>
+          <div className="text-xs text-slate-500 text-center">
+            Ao criar uma conta, você concorda com nossos{" "}
+            <Link href="/terms" className="text-primary-600 hover:text-primary-700">
+              Termos de Uso
+            </Link>{" "}
+            e{" "}
+            <Link href="/privacy" className="text-primary-600 hover:text-primary-700">
+              Política de Privacidade
+            </Link>
+          </div>
+        </form>
+      </AuthLayout>
   )
 }

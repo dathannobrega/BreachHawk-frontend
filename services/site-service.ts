@@ -15,7 +15,7 @@ export class SiteService {
   // Sites CRUD
   static async getSites(): Promise<SiteRead[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/`, {
+      const response = await fetch(`${API_BASE_URL}/api/sites/`, {
         headers: getAuthHeaders(),
       })
 
@@ -33,7 +33,7 @@ export class SiteService {
 
   static async createSite(site: SiteCreate): Promise<SiteRead> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/`, {
+      const response = await fetch(`${API_BASE_URL}/api/sites/`, {
         method: "POST",
         headers: {
           ...getAuthHeaders(),
@@ -56,7 +56,7 @@ export class SiteService {
 
   static async updateSite(id: number, site: SiteUpdate): Promise<SiteRead> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/sites/${id}`, {
         method: "PUT",
         headers: {
           ...getAuthHeaders(),
@@ -79,7 +79,7 @@ export class SiteService {
 
   static async deleteSite(id: number): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/sites/${id}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       })

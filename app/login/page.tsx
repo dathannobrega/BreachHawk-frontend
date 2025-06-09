@@ -43,7 +43,7 @@ export default function LoginPage() {
     const token = searchParams.get("token")
     if (token) {
       setIsLoading(true)
-      fetch(`${apiUrl}/api/v1/auth/me`, {
+      fetch(`${apiUrl}/api/accounts/me/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -99,7 +99,7 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = () => {
-    window.location.href = `${apiUrl}/api/v1/auth/login/google`
+    window.location.href = `${apiUrl}/api/accounts/login/google`
   }
 
   // Loading state

@@ -6,7 +6,7 @@ class BillingService {
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const token = localStorage.getItem("access_token")
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/billing${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}/api/billing/${endpoint}`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
