@@ -28,15 +28,15 @@ class AuthService {
   }
 
   async getLoginHistory(): Promise<LoginHistoryRead[]> {
-    return this.makeRequest<LoginHistoryRead[]>("api/accounts/login-history/")
+    return this.makeRequest<LoginHistoryRead[]>("/api/accounts/login-history/")
   }
 
   async getSessions(): Promise<UserSessionRead[]> {
-    return this.makeRequest<UserSessionRead[]>("api/accounts/sessions/")
+    return this.makeRequest<UserSessionRead[]>("/api/accounts/sessions/")
   }
 
   async deleteSession(sessionId: number): Promise<{ success: boolean }> {
-    return this.makeRequest<{ success: boolean }>(`api/accounts/sessions/${sessionId}`, {
+    return this.makeRequest<{ success: boolean }>(`/api/accounts/sessions/${sessionId}`, {
       method: "DELETE",
     })
   }
@@ -46,7 +46,7 @@ class AuthService {
     const formData = new FormData()
     formData.append("file", file)
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/users/me/profile-image`, {
+    const response = await fetch(`${API_BASE_URL}/api/accounts/me/profile-image/`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

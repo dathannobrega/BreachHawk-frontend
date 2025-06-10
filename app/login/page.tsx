@@ -99,7 +99,7 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = () => {
-    window.location.href = `${apiUrl}/api/accounts/login/google`
+    window.location.href = `${apiUrl}/api/accounts/login/google/`
   }
 
   // Loading state

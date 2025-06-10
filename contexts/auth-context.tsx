@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem("access_token")
     if (token) {
       // Verificar se o token ainda é válido
-      fetch(`${apiUrl}/api/v1/auth/me`, {
+      fetch(`${apiUrl}/api/v1/auth/me/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (credentials: { username: string; email?: string | null; password: string }) => {
     try {
-      const response = await fetch(`${apiUrl}/api/accounts/login`, {
+      const response = await fetch(`${apiUrl}/api/accounts/login/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
