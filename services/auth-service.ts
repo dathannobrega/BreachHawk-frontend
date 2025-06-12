@@ -36,7 +36,7 @@ class AuthService {
   }
 
   async deleteSession(sessionId: number): Promise<{ success: boolean }> {
-    return this.makeRequest<{ success: boolean }>(`/api/accounts/sessions/${sessionId}`, {
+    return this.makeRequest<{ success: boolean }>(`/api/accounts/sessions/${sessionId}/`, {
       method: "DELETE",
     })
   }

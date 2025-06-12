@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem("access_token")
     if (token) {
       // Verificar se o token ainda é válido
-      fetch(`${apiUrl}/api/v1/auth/me/`, {
+      fetch(`${apiUrl}/api/accounts/me/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -84,8 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json()
-
-      localStorage.setItem("access_token", data.access_token)
+      // Armazenar o token no localStorage
+      localStorage.setItem("access_token", data.access)
       setUser(data.user)
       setIsAuthenticated(true)
     } catch (error) {

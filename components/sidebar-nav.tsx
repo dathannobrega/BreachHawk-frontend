@@ -38,6 +38,8 @@ interface NavItem {
   roles?: string[]
 }
 
+const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+
 interface SidebarNavProps {
   onCollapseChange?: (collapsed: boolean) => void
 }
@@ -299,13 +301,13 @@ export function SidebarNav({ onCollapseChange }: SidebarNavProps) {
           <div className="flex justify-center">
             <Avatar className="h-10 w-10">
               {user?.profile_image ? (
-                <AvatarImage
-                  src={user.profile_image || "/placeholder.svg"}
-                  alt={getUserDisplayName()}
-                  className="object-cover"
-                />
+                  <AvatarImage
+                      src=${apiUrl}${user.profile_image} || "/placeholder.svg"}
+              alt={getUserDisplayName()}
+              className="object-cover"
+              />
               ) : (
-                <AvatarFallback className="bg-blue-100 text-blue-700 font-medium">{getUserInitials()}</AvatarFallback>
+              <AvatarFallback className="bg-blue-100 text-blue-700 font-medium">{getUserInitials()}</AvatarFallback>
               )}
             </Avatar>
           </div>
