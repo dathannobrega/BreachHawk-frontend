@@ -34,7 +34,6 @@ import {
   Globe,
   Plus,
   Play,
-  Upload,
   Loader2,
   CheckCircle,
   XCircle,
@@ -45,7 +44,6 @@ import {
   Edit,
   MoreHorizontal,
   FileText,
-  Settings,
   MessageSquare,
 } from "lucide-react"
 import { AuthType, CaptchaType, SiteType, type SiteCreate, type SiteRead } from "@/types/site"
@@ -56,6 +54,8 @@ import { SiteLogsDialog } from "@/components/site-logs-dialog"
 import FormTemplate from "@/components/templates/form-template"
 import CardTemplate from "@/components/templates/card-template"
 import { useSites } from "@/hooks/use-sites"
+import { ScraperManagement } from "@/components/scraper-management"
+import { ScraperStatus } from "@/components/scraper-status"
 
 export default function SitesPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth()
@@ -94,9 +94,7 @@ export default function SitesPage() {
     needs_js: false,
     enabled: true,
   })
-  const [scraperFile, setScraperFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isUploadingFile, setIsUploadingFile] = useState(false)
   const [runningTasks, setRunningTasks] = useState<Record<number, string>>({})
   const [refreshing, setRefreshing] = useState(false)
 
@@ -108,11 +106,6 @@ export default function SitesPage() {
   // Logs dialog states
   const [showLogsDialog, setShowLogsDialog] = useState(false)
   const [logsForSite, setLogsForSite] = useState<{ id: number; name: string } | null>(null)
-
-  // Scraper management states
-  const [showScraperDeleteDialog, setShowScraperDeleteDialog] = useState(false)
-  const [scraperToDelete, setScraperToDelete] = useState<string | null>(null)
-  const [isDeletingScraper, setIsDeletingScraper] = useState(false)
 
   // Verificar autenticação
   useEffect(() => {
@@ -152,12 +145,8 @@ export default function SitesPage() {
       needs_js: false,
       enabled: true,
     })
-    setScraperFile(null)
     setIsEditMode(false)
     setCurrentSiteId(null)
-    // Reset file input
-    const fileInput = document.getElementById("scraper-file") as HTMLInputElement
-    if (fileInput) fileInput.value = ""
   }
 
   const handleOpenCreateDialog = () => {
@@ -222,101 +211,8 @@ export default function SitesPage() {
     setShowLogsDialog(true)
   }
 
-  const handleDeleteScraper = (slug: string) => {
-    setScraperToDelete(slug)
-    setShowScraperDeleteDialog(true)
-  }
-
-  const confirmDeleteScraper = async () => {
-    if (!scraperToDelete) return
-
-    setIsDeletingScraper(true)
-    try {
-      await deleteScraper(scraperToDelete)
-      toast({
-        title: "Sucesso",
-        description: "Scraper excluído com sucesso!",
-      })
-      setShowScraperDeleteDialog(false)
-      setScraperToDelete(null)
-    } catch (err) {
-      toast({
-        title: "Erro",
-        description: err instanceof Error ? err.message : "Erro ao excluir scraper",
-        variant: "destructive",
-      })
-    } finally {
-      setIsDeletingScraper(false)
-    }
-  }
-
-  const handleScraperUpload = async () => {
-    if (!scraperFile) {
-      toast({
-        title: "Erro",
-        description: "Selecione um arquivo Python",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsUploadingFile(true)
-    try {
-      const result = await uploadScraper(scraperFile)
-      toast({
-        title: "Sucesso",
-        description: `${result.msg} - Slug: ${result.slug}`,
-      })
-      setScraperFile(null)
-      const fileInput = document.getElementById("scraper-file") as HTMLInputElement
-      if (fileInput) fileInput.value = ""
-      await fetchAvailableScrapers()
-    } catch (err) {
-      toast({
-        title: "Erro",
-        description: err instanceof Error ? err.message : "Erro ao fazer upload",
-        variant: "destructive",
-      })
-    } finally {
-      setIsUploadingFile(false)
-    }
-  }
-
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      toast({
-        title: "Erro de Validação",
-        description: "Nome do site é obrigatório",
-        variant: "destructive",
-      })
-      return false
-    }
-
-    if (!formData.url.trim()) {
-      toast({
-        title: "Erro de Validação",
-        description: "URL do site é obrigatória",
-        variant: "destructive",
-      })
-      return false
-    }
-
-    if (!formData.scraper.trim()) {
-      toast({
-        title: "Erro de Validação",
-        description: "Scraper é obrigatório",
-        variant: "destructive",
-      })
-      return false
-    }
-
-    return true
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!validateForm()) return
 
     setIsSubmitting(true)
     try {
@@ -472,9 +368,10 @@ export default function SitesPage() {
       <div className="space-y-6 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
+          <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight text-blue-900">Gerenciamento de Sites</h1>
-            <p className="text-blue-700 mt-2">Configure sites para scraping e monitore suas execuções</p>
+            <p className="text-blue-700">Configure sites para scraping e monitore suas execuções</p>
+            <ScraperStatus scrapers={availableScrapers} loading={scrapersLoading} error={error} />
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -501,69 +398,14 @@ export default function SitesPage() {
           </Alert>
         )}
 
-        {/* Scrapers Management Card */}
-        <CardTemplate
-          title="Scrapers Disponíveis"
-          description="Gerencie os scrapers personalizados do sistema"
-          variant="blue"
-          headerActions={<Settings className="h-5 w-5 text-blue-600" />}
-        >
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {scrapersLoading ? (
-                <div className="flex items-center">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2 text-blue-600" />
-                  <span className="text-sm text-blue-600">Carregando scrapers...</span>
-                </div>
-              ) : availableScrapers.length > 0 ? (
-                availableScrapers.map((scraper) => (
-                  <div key={scraper} className="flex items-center gap-1">
-                    <Badge variant="outline" className="border-blue-200 text-blue-700">
-                      {scraper}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleDeleteScraper(scraper)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                <span className="text-sm text-blue-600">Nenhum scraper disponível</span>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <Input
-                id="scraper-file"
-                type="file"
-                accept=".py"
-                onChange={(e) => setScraperFile(e.target.files?.[0] || null)}
-                className="flex-1 border-blue-200 focus:border-blue-400"
-                disabled={isUploadingFile}
-              />
-              <Button
-                variant="outline"
-                onClick={handleScraperUpload}
-                disabled={!scraperFile || isUploadingFile}
-                className="border-blue-200 text-blue-600 hover:bg-blue-50"
-              >
-                {isUploadingFile ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Upload className="h-4 w-4 mr-2" />
-                )}
-                Upload Scraper
-              </Button>
-            </div>
-            <p className="text-xs text-blue-600">
-              Apenas arquivos .py são aceitos. O scraper deve registrar-se no registry.
-            </p>
-          </div>
-        </CardTemplate>
+        {/* Scrapers Management */}
+        <ScraperManagement
+          availableScrapers={availableScrapers}
+          scrapersLoading={scrapersLoading}
+          onUploadScraper={uploadScraper}
+          onDeleteScraper={deleteScraper}
+          onRefresh={fetchAvailableScrapers}
+        />
 
         {/* Site Form Dialog */}
         <Dialog open={showSiteDialog} onOpenChange={(open) => !open && handleCloseDialog()}>
@@ -951,29 +793,6 @@ export default function SitesPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Delete Scraper Confirmation Dialog */}
-        <AlertDialog open={showScraperDeleteDialog} onOpenChange={setShowScraperDeleteDialog}>
-          <AlertDialogContent className="border-red-200">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-red-900">Confirmar Exclusão do Scraper</AlertDialogTitle>
-              <AlertDialogDescription className="text-red-700">
-                Tem certeza que deseja excluir o scraper "{scraperToDelete}"? Esta ação não pode ser desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="border-gray-200">Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmDeleteScraper}
-                disabled={isDeletingScraper}
-                className="bg-red-600 text-white hover:bg-red-700"
-              >
-                {isDeletingScraper && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Excluir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
         {/* Site Logs Dialog */}
         <SiteLogsDialog
           siteId={logsForSite?.id || null}
@@ -1105,3 +924,4 @@ export default function SitesPage() {
     </DashboardLayout>
   )
 }
+</

@@ -140,7 +140,7 @@ export class SiteService {
   // Scrapers
   static async getAvailableScrapers(): Promise<string[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/scrapers/available/`, {
+      const response = await fetch(`${API_BASE_URL}/api/scrapers/scrapers/`, {
         headers: getAuthHeaders(),
       })
 
@@ -181,12 +181,16 @@ export class SiteService {
 
   static async deleteScraper(slug: string): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/scrapers/${slug}/`, {
+      const response = await fetch(`${API_BASE_URL}/api/scrapers/scrapers/${slug}/`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       })
 
       if (!response.ok) {
+        if (response.status === 404) {
+          const error = await response.json()
+          throw new Error(error.detail || "Scraper não encontrado")
+        }
         const error = await response.json()
         throw new Error(error.detail || "Erro ao excluir scraper")
       }
