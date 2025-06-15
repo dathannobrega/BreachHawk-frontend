@@ -34,7 +34,7 @@ const planService = {
         throw new Error("Token de acesso não encontrado")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/plans`, {
+      const response = await fetch(`${API_BASE_URL}/api/companies/plans/`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -71,7 +71,7 @@ const planService = {
         throw new Error("Token de acesso não encontrado")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/plans`, {
+      const response = await fetch(`${API_BASE_URL}/api/companies/plans/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -158,7 +158,7 @@ const planService = {
         throw new Error("Token de acesso não encontrado")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/plans/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/companies/plans/${id}/`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

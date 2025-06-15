@@ -7,7 +7,7 @@ class PlatformUserService {
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const token = localStorage.getItem("access_token")
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/platform-users${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}/api/accounts/platform-users${endpoint}`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
@@ -34,15 +34,15 @@ class PlatformUserService {
   }
 
   async getUser(id: number): Promise<PlatformUser> {
-    return this.makeRequest<PlatformUser>(`/${id}`)
+    return this.makeRequest<PlatformUser>(`/${id}/`)
   }
 
   async getUserLoginHistory(id: number): Promise<LoginHistoryRead[]> {
-    return this.makeRequest<LoginHistoryRead[]>(`/${id}/login-history`)
+    return this.makeRequest<LoginHistoryRead[]>(`/${id}/login-history/`)
   }
 
   async getUserSessions(id: number): Promise<UserSessionRead[]> {
-    return this.makeRequest<UserSessionRead[]>(`/${id}/sessions`)
+    return this.makeRequest<UserSessionRead[]>(`/${id}/sessions/`)
   }
 
   async createUser(data: PlatformUserCreate): Promise<PlatformUser> {
@@ -53,14 +53,14 @@ class PlatformUserService {
   }
 
   async updateUser(id: number, data: PlatformUserUpdate): Promise<PlatformUser> {
-    return this.makeRequest<PlatformUser>(`/${id}`, {
+    return this.makeRequest<PlatformUser>(`/${id}/`, {
       method: "PUT",
       body: JSON.stringify(data),
     })
   }
 
   async deleteUser(id: number): Promise<void> {
-    await this.makeRequest<void>(`/${id}`, {
+    await this.makeRequest<void>(`/${id}/`, {
       method: "DELETE",
     })
   }

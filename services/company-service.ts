@@ -4,12 +4,16 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8
 
 class CompanyService {
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const token = localStorage.getItem("access_token")
+    // Safe access to localStorage with check for browser environment
+    let token = null
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("access_token")
+    }
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/companies${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}/api/companies${endpoint}`, {
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options?.headers,
       },
       ...options,
@@ -29,11 +33,18 @@ class CompanyService {
   }
 
   async getCompanies(): Promise<Company[]> {
-    return this.makeRequest<Company[]>("/")
+    try {
+      const data = await this.makeRequest<any>("/")
+      // Garantir que o retorno é sempre um array
+      return Array.isArray(data) ? data : []
+    } catch (error) {
+      console.error("Erro ao buscar empresas:", error)
+      return []
+    }
   }
 
   async getCompany(id: number): Promise<Company> {
-    return this.makeRequest<Company>(`/${id}`)
+    return this.makeRequest<Company>(`/${id}/`)
   }
 
   async createCompany(data: CompanyCreate): Promise<Company> {
@@ -44,14 +55,14 @@ class CompanyService {
   }
 
   async updateCompany(id: number, data: CompanyUpdate): Promise<Company> {
-    return this.makeRequest<Company>(`/${id}`, {
+    return this.makeRequest<Company>(`/${id}/`, {
       method: "PUT",
       body: JSON.stringify(data),
     })
   }
 
   async deleteCompany(id: number): Promise<void> {
-    await this.makeRequest<void>(`/${id}`, {
+    await this.makeRequest<void>(`/${id}/`, {
       method: "DELETE",
     })
   }

@@ -62,7 +62,13 @@ export default function PlatformCompanies() {
   }, [companies, searchTerm, statusFilter, planFilter])
 
   const filterCompanies = () => {
-    let filtered = companies
+    // Ensure companies is an array before filtering
+    if (!Array.isArray(companies)) {
+      setFilteredCompanies([]);
+      return;
+    }
+
+    let filtered = [...companies];
 
     if (searchTerm) {
       filtered = filtered.filter(

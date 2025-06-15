@@ -1,6 +1,6 @@
 "use client"
 
-import {useState} from "react"
+import {useState, useMemo} from "react"
 import {useRouter} from "next/navigation"
 import Link from "next/link"
 import {Button} from "@/components/ui/button"
@@ -12,7 +12,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar"
 import {Badge} from "@/components/ui/badge"
 import {
     Breadcrumb,
@@ -26,6 +25,7 @@ import {useAuth} from "@/contexts/auth-context"
 import {useLanguage} from "@/contexts/language-context"
 import {User, Settings, LogOut, Bell, Search, Globe, ChevronDown, Shield} from "lucide-react"
 import {cn} from "@/lib/utils"
+import UserAvatar from "@/components/user-avatar"
 
 interface UserHeaderProps {
     breadcrumbs?: Array<{
@@ -40,6 +40,17 @@ export function UserHeader({breadcrumbs = []}: UserHeaderProps) {
     const {user, logout} = useAuth()
     const {language, setLanguage} = useLanguage()
     const router = useRouter()
+
+    // Memorize a URL da imagem de perfil para evitar recalcular a cada renderização
+    const profileImageUrl = useMemo(() => {
+        if (!user?.profile_image || user.profile_image.trim() === '') {
+            return null;
+        }
+
+        return user.profile_image.startsWith('http')
+            ? user.profile_image
+            : `${apiUrl}${user.profile_image}`;
+    }, [user?.profile_image, apiUrl]);
 
     const handleLogout = async () => {
         await logout()
@@ -180,27 +191,12 @@ export function UserHeader({breadcrumbs = []}: UserHeaderProps) {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-9 px-2 space-x-2 hover:bg-slate-100">
-                                <Avatar className="h-7 w-7">
-                                    {user?.profile_image && user.profile_image.trim() !== '' ? (
-                                        <AvatarImage
-                                            src={
-                                                user.profile_image.startsWith('http')
-                                                    ? user.profile_image
-                                                    : `${apiUrl}${user.profile_image}`
-                                            }
-                                            alt={getUserDisplayName()}
-                                            className="object-cover"
-                                            onError={(e) => {
-                                                // Fallback para placeholder se a imagem falhar ao carregar
-                                                e.currentTarget.src = "/placeholder.svg";
-                                            }}
-                                        />
-                                    ) : (
-                                        <AvatarFallback className="text-xs bg-blue-100 text-blue-700 font-medium">
-                                            {getUserInitials()}
-                                        </AvatarFallback>
-                                    )}
-                                </Avatar>
+                                <UserAvatar
+                                    profileImage={user?.profile_image}
+                                    userName={getUserDisplayName()}
+                                    userInitials={getUserInitials()}
+                                    size="sm"
+                                />
                                 <div className="hidden md:flex flex-col items-start">
                                     <span className="text-sm font-medium text-slate-900">{getUserDisplayName()}</span>
                                     <Badge variant="secondary"

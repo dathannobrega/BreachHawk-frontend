@@ -6,7 +6,7 @@ class SMTPService {
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const token = localStorage.getItem("access_token")
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/smtp-config${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}/api/notifications/smtp${endpoint}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -39,7 +39,7 @@ class SMTPService {
       to_email: email,
     }
 
-    return this.makeRequest<TestEmailResponse>("/test", {
+    return this.makeRequest<TestEmailResponse>("/test/", {
       method: "POST",
       body: JSON.stringify(data),
     })

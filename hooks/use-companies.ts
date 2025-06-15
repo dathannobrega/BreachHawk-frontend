@@ -16,14 +16,18 @@ export function useCompanies() {
       setError(null)
 
       const companiesData = await companyService.getCompanies()
-      setCompanies(companiesData)
+      // Garantir que companiesData é sempre um array antes de atualizar o estado
+      setCompanies(Array.isArray(companiesData) ? companiesData : [])
 
-      // Calcular estatísticas
-      const calculatedStats = companyService.calculateStats(companiesData)
+      // Calcular estatísticas com dados seguros
+      const safeCompaniesData = Array.isArray(companiesData) ? companiesData : []
+      const calculatedStats = companyService.calculateStats(safeCompaniesData)
       setStats(calculatedStats)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao carregar empresas")
       console.error("Erro ao buscar empresas:", err)
+      // Em caso de erro, garantir que companies seja um array vazio
+      setCompanies([])
     } finally {
       setLoading(false)
     }
