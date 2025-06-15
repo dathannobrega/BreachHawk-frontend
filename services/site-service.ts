@@ -6,6 +6,8 @@ import type {
   TaskStatus,
   ScrapeLogRead,
   ScraperUploadResponse,
+  Snapshot,
+  TelegramAccount,
 } from "@/types/site"
 import { getAuthHeaders } from "@/lib/utils"
 
@@ -27,6 +29,24 @@ export class SiteService {
       return await response.json()
     } catch (error) {
       console.error("Error fetching sites:", error)
+      throw error
+    }
+  }
+
+  static async getSite(id: number): Promise<SiteRead> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sites/${id}/`, {
+        headers: getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao buscar site")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Error fetching site:", error)
       throw error
     }
   }
@@ -56,7 +76,7 @@ export class SiteService {
 
   static async updateSite(id: number, site: SiteUpdate): Promise<SiteRead> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/sites/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/sites/${id}/`, {
         method: "PUT",
         headers: {
           ...getAuthHeaders(),
@@ -77,9 +97,32 @@ export class SiteService {
     }
   }
 
+  static async patchSite(id: number, site: Partial<SiteUpdate>): Promise<SiteRead> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sites/${id}/`, {
+        method: "PATCH",
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(site),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao atualizar site")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Error patching site:", error)
+      throw error
+    }
+  }
+
   static async deleteSite(id: number): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/sites/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/sites/${id}/`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       })
@@ -97,7 +140,7 @@ export class SiteService {
   // Scrapers
   static async getAvailableScrapers(): Promise<string[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/scrapers`, {
+      const response = await fetch(`${API_BASE_URL}/api/scrapers/available/`, {
         headers: getAuthHeaders(),
       })
 
@@ -118,7 +161,7 @@ export class SiteService {
       const formData = new FormData()
       formData.append("file", file)
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/upload-scraper`, {
+      const response = await fetch(`${API_BASE_URL}/api/scrapers/upload/`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: formData,
@@ -138,7 +181,7 @@ export class SiteService {
 
   static async deleteScraper(slug: string): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/scrapers/${slug}`, {
+      const response = await fetch(`${API_BASE_URL}/api/scrapers/${slug}/`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       })
@@ -156,7 +199,7 @@ export class SiteService {
   // Tasks
   static async runScraper(siteId: number): Promise<TaskResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/${siteId}/run`, {
+      const response = await fetch(`${API_BASE_URL}/api/scrapers/run/${siteId}/`, {
         method: "POST",
         headers: getAuthHeaders(),
       })
@@ -175,7 +218,7 @@ export class SiteService {
 
   static async getTaskStatus(taskId: string): Promise<TaskStatus> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/tasks/${taskId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/scrapers/tasks/${taskId}/`, {
         headers: getAuthHeaders(),
       })
 
@@ -192,61 +235,87 @@ export class SiteService {
   }
 
   // Logs
-  static async getSiteLogs(siteId: number): Promise<ScrapeLogRead[]> {
+  static async getSiteLogs(siteId?: number): Promise<ScrapeLogRead[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/${siteId}/logs`, {
+      const url = siteId ? `${API_BASE_URL}/api/scrapers/logs/?site=${siteId}` : `${API_BASE_URL}/api/scrapers/logs/`
+
+      const response = await fetch(url, {
         headers: getAuthHeaders(),
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.detail || "Erro ao buscar logs do site")
+        throw new Error(error.detail || "Erro ao buscar logs")
       }
 
       return await response.json()
     } catch (error) {
-      console.error("Error fetching site logs:", error)
+      console.error("Error fetching logs:", error)
       throw error
     }
   }
 
-  // URL Management
-  static async addSiteUrl(siteId: number, url: string): Promise<SiteRead> {
+  // Snapshots
+  static async getSnapshots(siteId?: number): Promise<Snapshot[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/${siteId}/urls`, {
+      const url = siteId
+        ? `${API_BASE_URL}/api/scrapers/snapshots/?site=${siteId}`
+        : `${API_BASE_URL}/api/scrapers/snapshots/`
+
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao buscar snapshots")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Error fetching snapshots:", error)
+      throw error
+    }
+  }
+
+  // Telegram Accounts
+  static async getTelegramAccounts(): Promise<TelegramAccount[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/telegram-accounts/`, {
+        headers: getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao buscar contas do Telegram")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Error fetching telegram accounts:", error)
+      throw error
+    }
+  }
+
+  static async createTelegramAccount(account: Omit<TelegramAccount, "id">): Promise<TelegramAccount> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/telegram-accounts/`, {
         method: "POST",
         headers: {
           ...getAuthHeaders(),
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify(account),
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.detail || "Erro ao adicionar URL")
+        throw new Error(error.detail || "Erro ao criar conta do Telegram")
       }
 
       return await response.json()
     } catch (error) {
-      console.error("Error adding site URL:", error)
-      throw error
-    }
-  }
-
-  static async deleteSiteUrl(linkId: number): Promise<void> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/sites/urls/${linkId}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao excluir URL")
-      }
-    } catch (error) {
-      console.error("Error deleting site URL:", error)
+      console.error("Error creating telegram account:", error)
       throw error
     }
   }

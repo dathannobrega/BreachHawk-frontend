@@ -1,11 +1,9 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -48,13 +46,16 @@ import {
   MoreHorizontal,
   FileText,
   Settings,
+  MessageSquare,
 } from "lucide-react"
-import { useSites } from "@/hooks/use-sites"
-import { AuthType, CaptchaType, type SiteCreate, type SiteRead } from "@/types/site"
+import { AuthType, CaptchaType, SiteType, type SiteCreate, type SiteRead } from "@/types/site"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import DashboardLayout from "@/components/dashboard-layout"
 import { SiteLogsDialog } from "@/components/site-logs-dialog"
+import FormTemplate from "@/components/templates/form-template"
+import CardTemplate from "@/components/templates/card-template"
+import { useSites } from "@/hooks/use-sites"
 
 export default function SitesPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth()
@@ -62,6 +63,7 @@ export default function SitesPage() {
   const {
     sites,
     availableScrapers,
+    telegramAccounts,
     loading,
     scrapersLoading,
     error,
@@ -74,6 +76,7 @@ export default function SitesPage() {
     getTaskStatus,
     fetchSites,
     fetchAvailableScrapers,
+    fetchTelegramAccounts,
   } = useSites()
   const { toast } = useToast()
 
@@ -83,11 +86,13 @@ export default function SitesPage() {
   const [currentSiteId, setCurrentSiteId] = useState<number | null>(null)
   const [formData, setFormData] = useState<SiteCreate>({
     name: "",
-    links: [""],
+    url: "",
+    type: SiteType.WEBSITE,
     auth_type: AuthType.NONE,
     captcha_type: CaptchaType.NONE,
     scraper: "generic",
     needs_js: false,
+    enabled: true,
   })
   const [scraperFile, setScraperFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -116,11 +121,17 @@ export default function SitesPage() {
     }
   }, [isAuthenticated, authLoading, user, router])
 
+  useEffect(() => {
+    if (isAuthenticated && user?.role === "platform_admin") {
+      fetchTelegramAccounts()
+    }
+  }, [isAuthenticated, user, fetchTelegramAccounts])
+
   if (authLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
       </DashboardLayout>
     )
@@ -133,11 +144,13 @@ export default function SitesPage() {
   const resetForm = () => {
     setFormData({
       name: "",
-      links: [""],
+      url: "",
+      type: SiteType.WEBSITE,
       auth_type: AuthType.NONE,
       captcha_type: CaptchaType.NONE,
       scraper: availableScrapers.length > 0 ? availableScrapers[0] : "generic",
       needs_js: false,
+      enabled: true,
     })
     setScraperFile(null)
     setIsEditMode(false)
@@ -155,11 +168,16 @@ export default function SitesPage() {
   const handleOpenEditDialog = (site: SiteRead) => {
     setFormData({
       name: site.name,
-      links: [...site.links],
+      url: site.url,
+      type: site.type,
       auth_type: site.auth_type,
       captcha_type: site.captcha_type,
       scraper: site.scraper,
       needs_js: site.needs_js,
+      enabled: site.enabled ?? true,
+      bypass_config: site.bypass_config,
+      credentials: site.credentials,
+      telegram_account: site.telegram_account,
     })
     setIsEditMode(true)
     setCurrentSiteId(site.id)
@@ -168,7 +186,7 @@ export default function SitesPage() {
 
   const handleCloseDialog = () => {
     setShowSiteDialog(false)
-    setTimeout(resetForm, 300) // Reset after dialog animation
+    setTimeout(resetForm, 300)
   }
 
   const handleDeleteSite = (site: SiteRead) => {
@@ -232,29 +250,6 @@ export default function SitesPage() {
     }
   }
 
-  const addUrlField = () => {
-    setFormData((prev) => ({
-      ...prev,
-      links: [...prev.links, ""],
-    }))
-  }
-
-  const removeUrlField = (index: number) => {
-    if (formData.links.length > 1) {
-      setFormData((prev) => ({
-        ...prev,
-        links: prev.links.filter((_, i) => i !== index),
-      }))
-    }
-  }
-
-  const updateUrl = (index: number, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      links: prev.links.map((url, i) => (i === index ? value : url)),
-    }))
-  }
-
   const handleScraperUpload = async () => {
     if (!scraperFile) {
       toast({
@@ -273,11 +268,8 @@ export default function SitesPage() {
         description: `${result.msg} - Slug: ${result.slug}`,
       })
       setScraperFile(null)
-      // Reset file input
       const fileInput = document.getElementById("scraper-file") as HTMLInputElement
       if (fileInput) fileInput.value = ""
-
-      // Atualiza a lista de scrapers disponíveis
       await fetchAvailableScrapers()
     } catch (err) {
       toast({
@@ -300,11 +292,10 @@ export default function SitesPage() {
       return false
     }
 
-    const validLinks = formData.links.filter((link) => link.trim() !== "")
-    if (validLinks.length === 0) {
+    if (!formData.url.trim()) {
       toast({
         title: "Erro de Validação",
-        description: "Adicione pelo menos uma URL válida",
+        description: "URL do site é obrigatória",
         variant: "destructive",
       })
       return false
@@ -313,7 +304,7 @@ export default function SitesPage() {
     if (!formData.scraper.trim()) {
       toast({
         title: "Erro de Validação",
-        description: "Nome do scraper é obrigatório",
+        description: "Scraper é obrigatório",
         variant: "destructive",
       })
       return false
@@ -329,20 +320,14 @@ export default function SitesPage() {
 
     setIsSubmitting(true)
     try {
-      const validLinks = formData.links.filter((link) => link.trim() !== "")
-      const siteData = {
-        ...formData,
-        links: validLinks,
-      }
-
       if (isEditMode && currentSiteId) {
-        await updateSite(currentSiteId, siteData)
+        await updateSite(currentSiteId, formData)
         toast({
           title: "Sucesso",
           description: "Site atualizado com sucesso!",
         })
       } else {
-        await createSite(siteData)
+        await createSite(formData)
         toast({
           title: "Sucesso",
           description: "Site criado com sucesso!",
@@ -350,7 +335,6 @@ export default function SitesPage() {
       }
 
       handleCloseDialog()
-      // Refresh sites list
       await fetchSites()
     } catch (err) {
       toast({
@@ -399,7 +383,6 @@ export default function SitesPage() {
               variant: "destructive",
             })
           } else if (status.status === "PENDING" || status.status === "STARTED") {
-            // Continue polling
             setTimeout(pollStatus, 2000)
           }
         } catch (err) {
@@ -427,19 +410,38 @@ export default function SitesPage() {
     try {
       await fetchSites()
       await fetchAvailableScrapers()
+      await fetchTelegramAccounts()
       toast({
         title: "Atualizado",
-        description: "Lista de sites atualizada com sucesso",
+        description: "Dados atualizados com sucesso",
       })
     } catch (err) {
       toast({
         title: "Erro",
-        description: "Falha ao atualizar a lista de sites",
+        description: "Falha ao atualizar os dados",
         variant: "destructive",
       })
     } finally {
       setRefreshing(false)
     }
+  }
+
+  const getSiteTypeBadge = (type: SiteType) => {
+    const config = {
+      [SiteType.FORUM]: { variant: "default" as const, label: "Fórum", icon: MessageSquare },
+      [SiteType.WEBSITE]: { variant: "secondary" as const, label: "Website", icon: Globe },
+      [SiteType.TELEGRAM]: { variant: "outline" as const, label: "Telegram", icon: MessageSquare },
+      [SiteType.DISCORD]: { variant: "destructive" as const, label: "Discord", icon: MessageSquare },
+      [SiteType.PASTE]: { variant: "default" as const, label: "Paste", icon: FileText },
+    }
+
+    const { variant, label, icon: Icon } = config[type]
+    return (
+      <Badge variant={variant} className="flex items-center gap-1">
+        <Icon className="h-3 w-3" />
+        {label}
+      </Badge>
+    )
   }
 
   const getAuthTypeBadge = (authType: AuthType) => {
@@ -467,18 +469,24 @@ export default function SitesPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Gerenciamento de Sites</h1>
-            <p className="text-muted-foreground">Configure sites para scraping e monitore suas execuções</p>
+            <h1 className="text-3xl font-bold tracking-tight text-blue-900">Gerenciamento de Sites</h1>
+            <p className="text-blue-700 mt-2">Configure sites para scraping e monitore suas execuções</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={handleRefresh} disabled={refreshing}>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="border-blue-200 text-blue-600 hover:bg-blue-50"
+            >
               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             </Button>
-            <Button onClick={handleOpenCreateDialog}>
+            <Button onClick={handleOpenCreateDialog} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
               <Plus className="h-4 w-4 mr-2" />
               Novo Site
             </Button>
@@ -487,145 +495,178 @@ export default function SitesPage() {
 
         {/* Error Alert */}
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="border-red-200 bg-red-50">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         {/* Scrapers Management Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Scrapers Disponíveis
-            </CardTitle>
-            <CardDescription>Gerencie os scrapers personalizados do sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {scrapersLoading ? (
-                  <div className="flex items-center">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    <span className="text-sm text-muted-foreground">Carregando scrapers...</span>
+        <CardTemplate
+          title="Scrapers Disponíveis"
+          description="Gerencie os scrapers personalizados do sistema"
+          variant="blue"
+          headerActions={<Settings className="h-5 w-5 text-blue-600" />}
+        >
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {scrapersLoading ? (
+                <div className="flex items-center">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2 text-blue-600" />
+                  <span className="text-sm text-blue-600">Carregando scrapers...</span>
+                </div>
+              ) : availableScrapers.length > 0 ? (
+                availableScrapers.map((scraper) => (
+                  <div key={scraper} className="flex items-center gap-1">
+                    <Badge variant="outline" className="border-blue-200 text-blue-700">
+                      {scraper}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleDeleteScraper(scraper)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
-                ) : availableScrapers.length > 0 ? (
-                  availableScrapers.map((scraper) => (
-                    <div key={scraper} className="flex items-center gap-1">
-                      <Badge variant="outline">{scraper}</Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => handleDeleteScraper(scraper)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))
-                ) : (
-                  <span className="text-sm text-muted-foreground">Nenhum scraper disponível</span>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Input
-                  id="scraper-file"
-                  type="file"
-                  accept=".py"
-                  onChange={(e) => setScraperFile(e.target.files?.[0] || null)}
-                  className="flex-1"
-                  disabled={isUploadingFile}
-                />
-                <Button variant="outline" onClick={handleScraperUpload} disabled={!scraperFile || isUploadingFile}>
-                  {isUploadingFile ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Upload className="h-4 w-4 mr-2" />
-                  )}
-                  Upload Scraper
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Apenas arquivos .py são aceitos. O scraper deve registrar-se no registry.
-              </p>
+                ))
+              ) : (
+                <span className="text-sm text-blue-600">Nenhum scraper disponível</span>
+              )}
             </div>
-          </CardContent>
-        </Card>
+
+            <div className="flex gap-2">
+              <Input
+                id="scraper-file"
+                type="file"
+                accept=".py"
+                onChange={(e) => setScraperFile(e.target.files?.[0] || null)}
+                className="flex-1 border-blue-200 focus:border-blue-400"
+                disabled={isUploadingFile}
+              />
+              <Button
+                variant="outline"
+                onClick={handleScraperUpload}
+                disabled={!scraperFile || isUploadingFile}
+                className="border-blue-200 text-blue-600 hover:bg-blue-50"
+              >
+                {isUploadingFile ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                Upload Scraper
+              </Button>
+            </div>
+            <p className="text-xs text-blue-600">
+              Apenas arquivos .py são aceitos. O scraper deve registrar-se no registry.
+            </p>
+          </div>
+        </CardTemplate>
 
         {/* Site Form Dialog */}
         <Dialog open={showSiteDialog} onOpenChange={(open) => !open && handleCloseDialog()}>
-          <DialogContent className="sm:max-w-[600px] bg-background">
-            <DialogHeader>
-              <DialogTitle>{isEditMode ? "Editar Site" : "Cadastrar Novo Site"}</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="sm:max-w-[800px] bg-white border-blue-200">
+            <DialogHeader className="border-b border-blue-100 pb-4">
+              <DialogTitle className="text-blue-900 text-xl">
+                {isEditMode ? "Editar Site" : "Cadastrar Novo Site"}
+              </DialogTitle>
+              <DialogDescription className="text-blue-700">
                 {isEditMode ? "Atualize as informações do site" : "Configure um novo site para scraping"}
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Site Name */}
-              <div className="space-y-2">
-                <Label htmlFor="site-name" className="text-sm font-medium">
-                  Nome do Site
-                </Label>
-                <Input
-                  id="site-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ex: Facebook, LinkedIn, etc."
-                  className="w-full"
-                />
+            <FormTemplate title="" onSubmit={handleSubmit} isLoading={isSubmitting} className="border-0 shadow-none">
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="site-name" className="text-blue-900 font-medium">
+                    Nome do Site *
+                  </Label>
+                  <Input
+                    id="site-name"
+                    value={formData.name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="Ex: Facebook, LinkedIn, etc."
+                    className="border-blue-200 focus:border-blue-400"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="site-url" className="text-blue-900 font-medium">
+                    URL Principal *
+                  </Label>
+                  <Input
+                    id="site-url"
+                    type="url"
+                    value={formData.url}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, url: e.target.value }))}
+                    placeholder="https://exemplo.com"
+                    className="border-blue-200 focus:border-blue-400"
+                    required
+                  />
+                </div>
               </div>
 
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="basic">URLs</TabsTrigger>
-                  <TabsTrigger value="scraper">Scraper</TabsTrigger>
-                  <TabsTrigger value="advanced">Avançado</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-4 bg-blue-50">
+                  <TabsTrigger value="basic" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                    Básico
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="scraper"
+                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                  >
+                    Scraper
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="advanced"
+                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                  >
+                    Avançado
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="config"
+                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                  >
+                    Configuração
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="basic" className="space-y-4 pt-4">
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium">URLs do Site</Label>
-                      <div className="space-y-2 mt-2">
-                        {formData.links.map((url, index) => (
-                          <div key={index} className="flex gap-2">
-                            <Input
-                              placeholder="https://exemplo.com"
-                              value={url}
-                              onChange={(e) => updateUrl(index, e.target.value)}
-                              className="flex-1"
-                            />
-                            {formData.links.length > 1 && (
-                              <Button type="button" variant="outline" size="icon" onClick={() => removeUrlField(index)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                        <Button type="button" variant="outline" size="sm" onClick={addUrlField} className="w-full">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar URL
-                        </Button>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="site-type" className="text-blue-900 font-medium">
+                        Tipo do Site
+                      </Label>
+                      <Select
+                        value={formData.type}
+                        onValueChange={(value: SiteType) => setFormData((prev) => ({ ...prev, type: value }))}
+                      >
+                        <SelectTrigger className="border-blue-200 focus:border-blue-400">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={SiteType.WEBSITE}>Website</SelectItem>
+                          <SelectItem value={SiteType.FORUM}>Fórum</SelectItem>
+                          <SelectItem value={SiteType.TELEGRAM}>Telegram</SelectItem>
+                          <SelectItem value={SiteType.DISCORD}>Discord</SelectItem>
+                          <SelectItem value={SiteType.PASTE}>Paste</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
-                </TabsContent>
 
-                <TabsContent value="scraper" className="space-y-4 pt-4">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="scraper" className="text-sm font-medium">
+                    <div className="space-y-2">
+                      <Label htmlFor="scraper" className="text-blue-900 font-medium">
                         Scraper
                       </Label>
                       <Select
                         value={formData.scraper}
                         onValueChange={(value) => setFormData((prev) => ({ ...prev, scraper: value }))}
                       >
-                        <SelectTrigger className="mt-2">
+                        <SelectTrigger className="border-blue-200 focus:border-blue-400">
                           <SelectValue placeholder="Selecione um scraper" />
                         </SelectTrigger>
                         <SelectContent>
@@ -649,19 +690,45 @@ export default function SitesPage() {
                       </Select>
                     </div>
                   </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="enabled"
+                      checked={formData.enabled}
+                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, enabled: checked }))}
+                      className="data-[state=checked]:bg-blue-600"
+                    />
+                    <Label htmlFor="enabled" className="text-blue-900 font-medium">
+                      Site Ativo
+                    </Label>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="scraper" className="space-y-4 pt-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="needs-js"
+                      checked={formData.needs_js}
+                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, needs_js: checked }))}
+                      className="data-[state=checked]:bg-blue-600"
+                    />
+                    <Label htmlFor="needs-js" className="text-blue-900 font-medium">
+                      Requer JavaScript
+                    </Label>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="advanced" className="space-y-4 pt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="auth-type" className="text-sm font-medium">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="auth-type" className="text-blue-900 font-medium">
                         Tipo de Autenticação
                       </Label>
                       <Select
                         value={formData.auth_type}
                         onValueChange={(value: AuthType) => setFormData((prev) => ({ ...prev, auth_type: value }))}
                       >
-                        <SelectTrigger className="mt-2">
+                        <SelectTrigger className="border-blue-200 focus:border-blue-400">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -672,8 +739,8 @@ export default function SitesPage() {
                       </Select>
                     </div>
 
-                    <div>
-                      <Label htmlFor="captcha-type" className="text-sm font-medium">
+                    <div className="space-y-2">
+                      <Label htmlFor="captcha-type" className="text-blue-900 font-medium">
                         Tipo de Captcha
                       </Label>
                       <Select
@@ -682,7 +749,7 @@ export default function SitesPage() {
                           setFormData((prev) => ({ ...prev, captcha_type: value }))
                         }
                       >
-                        <SelectTrigger className="mt-2">
+                        <SelectTrigger className="border-blue-200 focus:border-blue-400">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -695,47 +762,187 @@ export default function SitesPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="needs-js"
-                      checked={formData.needs_js}
-                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, needs_js: checked }))}
-                    />
-                    <Label htmlFor="needs-js" className="text-sm font-medium">
-                      Requer JavaScript
-                    </Label>
+                  {formData.type === SiteType.TELEGRAM && (
+                    <div className="space-y-2">
+                      <Label htmlFor="telegram-account" className="text-blue-900 font-medium">
+                        Conta do Telegram
+                      </Label>
+                      <Select
+                        value={formData.telegram_account?.toString() || ""}
+                        onValueChange={(value) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            telegram_account: value ? Number.parseInt(value) : undefined,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="border-blue-200 focus:border-blue-400">
+                          <SelectValue placeholder="Selecione uma conta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhuma</SelectItem>
+                          {telegramAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id.toString()}>
+                              Conta {account.id} (API ID: {account.api_id})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="config" className="space-y-4 pt-4">
+                  {formData.auth_type !== AuthType.NONE && (
+                    <div className="space-y-4 p-4 border border-blue-200 rounded-lg bg-blue-50/30">
+                      <h4 className="font-medium text-blue-900">Credenciais de Autenticação</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="username" className="text-blue-900 font-medium">
+                            Usuário
+                          </Label>
+                          <Input
+                            id="username"
+                            value={formData.credentials?.username || ""}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                credentials: { ...prev.credentials, username: e.target.value },
+                              }))
+                            }
+                            placeholder="Nome de usuário"
+                            className="border-blue-200 focus:border-blue-400"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="password" className="text-blue-900 font-medium">
+                            Senha
+                          </Label>
+                          <Input
+                            id="password"
+                            type="password"
+                            value={formData.credentials?.password || ""}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                credentials: { ...prev.credentials, password: e.target.value },
+                              }))
+                            }
+                            placeholder="Senha"
+                            className="border-blue-200 focus:border-blue-400"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="token" className="text-blue-900 font-medium">
+                          Token (Opcional)
+                        </Label>
+                        <Input
+                          id="token"
+                          value={formData.credentials?.token || ""}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              credentials: { ...prev.credentials, token: e.target.value },
+                            }))
+                          }
+                          placeholder="Token de acesso"
+                          className="border-blue-200 focus:border-blue-400"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4 p-4 border border-blue-200 rounded-lg bg-blue-50/30">
+                    <h4 className="font-medium text-blue-900">Configurações de Bypass</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="use-proxies"
+                          checked={formData.bypass_config?.use_proxies || false}
+                          onCheckedChange={(checked) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              bypass_config: { ...prev.bypass_config, use_proxies: checked },
+                            }))
+                          }
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                        <Label htmlFor="use-proxies" className="text-blue-900 font-medium">
+                          Usar Proxies
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="rotate-user-agent"
+                          checked={formData.bypass_config?.rotate_user_agent || false}
+                          onCheckedChange={(checked) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              bypass_config: { ...prev.bypass_config, rotate_user_agent: checked },
+                            }))
+                          }
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                        <Label htmlFor="rotate-user-agent" className="text-blue-900 font-medium">
+                          Rotacionar User Agent
+                        </Label>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="captcha-solver" className="text-blue-900 font-medium">
+                          Solucionador de Captcha
+                        </Label>
+                        <Input
+                          id="captcha-solver"
+                          value={formData.bypass_config?.captcha_solver || ""}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              bypass_config: { ...prev.bypass_config, captcha_solver: e.target.value },
+                            }))
+                          }
+                          placeholder="Ex: 2captcha, anticaptcha"
+                          className="border-blue-200 focus:border-blue-400"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
 
-              <div className="flex justify-end space-x-2 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>
+              <div className="flex justify-end space-x-3 pt-6 border-t border-blue-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCloseDialog}
+                  className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
                   {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   {isEditMode ? "Atualizar" : "Criar"} Site
                 </Button>
               </div>
-            </form>
+            </FormTemplate>
           </DialogContent>
         </Dialog>
 
         {/* Delete Site Confirmation Dialog */}
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent>
+          <AlertDialogContent className="border-red-200">
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogTitle className="text-red-900">Confirmar Exclusão</AlertDialogTitle>
+              <AlertDialogDescription className="text-red-700">
                 Tem certeza que deseja excluir o site "{siteToDelete?.name}"? Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel className="border-gray-200">Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmDeleteSite}
                 disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="bg-red-600 text-white hover:bg-red-700"
               >
                 {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Excluir
@@ -746,19 +953,19 @@ export default function SitesPage() {
 
         {/* Delete Scraper Confirmation Dialog */}
         <AlertDialog open={showScraperDeleteDialog} onOpenChange={setShowScraperDeleteDialog}>
-          <AlertDialogContent>
+          <AlertDialogContent className="border-red-200">
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar Exclusão do Scraper</AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogTitle className="text-red-900">Confirmar Exclusão do Scraper</AlertDialogTitle>
+              <AlertDialogDescription className="text-red-700">
                 Tem certeza que deseja excluir o scraper "{scraperToDelete}"? Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel className="border-gray-200">Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmDeleteScraper}
                 disabled={isDeletingScraper}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="bg-red-600 text-white hover:bg-red-700"
               >
                 {isDeletingScraper && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Excluir
@@ -776,121 +983,124 @@ export default function SitesPage() {
         />
 
         {/* Sites Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Sites Cadastrados
-            </CardTitle>
-            <CardDescription>Lista de todos os sites configurados para scraping</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading && sites.length === 0 ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : sites.length === 0 ? (
-              <div className="text-center py-12">
-                <Globe className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Nenhum site cadastrado</h3>
-                <p className="text-muted-foreground mb-4">Comece adicionando seu primeiro site para scraping</p>
-                <Button onClick={handleOpenCreateDialog}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Cadastrar Site
-                </Button>
-              </div>
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-16">ID</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>URLs</TableHead>
-                      <TableHead className="w-32">Scraper</TableHead>
-                      <TableHead className="w-32">Autenticação</TableHead>
-                      <TableHead className="w-32">Captcha</TableHead>
-                      <TableHead className="w-24 text-center">JavaScript</TableHead>
-                      <TableHead className="w-24 text-center">Ações</TableHead>
+        <CardTemplate
+          title="Sites Cadastrados"
+          description="Lista de todos os sites configurados para scraping"
+          variant="blue"
+          headerActions={<Globe className="h-5 w-5 text-blue-600" />}
+        >
+          {loading && sites.length === 0 ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : sites.length === 0 ? (
+            <div className="text-center py-12">
+              <Globe className="h-12 w-12 mx-auto text-blue-400 mb-4" />
+              <h3 className="text-lg font-medium mb-2 text-blue-900">Nenhum site cadastrado</h3>
+              <p className="text-blue-700 mb-4">Comece adicionando seu primeiro site para scraping</p>
+              <Button onClick={handleOpenCreateDialog} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Cadastrar Site
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-md border border-blue-200 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-blue-50">
+                  <TableRow>
+                    <TableHead className="w-16 text-blue-900 font-semibold">ID</TableHead>
+                    <TableHead className="text-blue-900 font-semibold">Nome</TableHead>
+                    <TableHead className="text-blue-900 font-semibold">URL</TableHead>
+                    <TableHead className="w-32 text-blue-900 font-semibold">Tipo</TableHead>
+                    <TableHead className="w-32 text-blue-900 font-semibold">Scraper</TableHead>
+                    <TableHead className="w-32 text-blue-900 font-semibold">Autenticação</TableHead>
+                    <TableHead className="w-32 text-blue-900 font-semibold">Captcha</TableHead>
+                    <TableHead className="w-24 text-center text-blue-900 font-semibold">Status</TableHead>
+                    <TableHead className="w-24 text-center text-blue-900 font-semibold">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sites.map((site) => (
+                    <TableRow key={site.id} className="hover:bg-blue-50/50">
+                      <TableCell className="font-medium text-blue-900">{site.id}</TableCell>
+                      <TableCell className="font-medium text-blue-900">{site.name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <ExternalLink className="h-3 w-3 text-blue-500" />
+                          <span className="text-sm truncate max-w-[200px] text-blue-700" title={site.url}>
+                            {site.url}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getSiteTypeBadge(site.type)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="border-blue-200 text-blue-700">
+                          {site.scraper}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{getAuthTypeBadge(site.auth_type)}</TableCell>
+                      <TableCell>{getCaptchaTypeBadge(site.captcha_type)}</TableCell>
+                      <TableCell className="text-center">
+                        {site.enabled ? (
+                          <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-400 mx-auto" />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="border-blue-200">
+                              <DropdownMenuItem
+                                onClick={() => handleOpenEditDialog(site)}
+                                className="text-blue-700 hover:bg-blue-50"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleShowLogs(site)}
+                                className="text-blue-700 hover:bg-blue-50"
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                Ver Logs
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleRunScraper(site.id)}
+                                disabled={runningTasks[site.id] !== undefined}
+                                className="text-green-700 hover:bg-green-50"
+                              >
+                                {runningTasks[site.id] ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Play className="h-4 w-4 mr-2" />
+                                )}
+                                Executar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteSite(site)}
+                                className="text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sites.map((site) => (
-                      <TableRow key={site.id}>
-                        <TableCell className="font-medium">{site.id}</TableCell>
-                        <TableCell className="font-medium">{site.name}</TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {site.links.slice(0, 2).map((link, index) => (
-                              <div key={index} className="flex items-center space-x-2">
-                                <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-sm truncate max-w-[200px]" title={link}>
-                                  {link}
-                                </span>
-                              </div>
-                            ))}
-                            {site.links.length > 2 && (
-                              <div className="text-xs text-muted-foreground">+{site.links.length - 2} mais</div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{site.scraper}</Badge>
-                        </TableCell>
-                        <TableCell>{getAuthTypeBadge(site.auth_type)}</TableCell>
-                        <TableCell>{getCaptchaTypeBadge(site.captcha_type)}</TableCell>
-                        <TableCell className="text-center">
-                          {site.needs_js ? (
-                            <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-gray-400 mx-auto" />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex justify-center">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleOpenEditDialog(site)}>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleShowLogs(site)}>
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  Ver Logs
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleRunScraper(site.id)}
-                                  disabled={runningTasks[site.id] !== undefined}
-                                >
-                                  {runningTasks[site.id] ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <Play className="h-4 w-4 mr-2" />
-                                  )}
-                                  Executar
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleDeleteSite(site)} className="text-destructive">
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardTemplate>
       </div>
     </DashboardLayout>
   )
