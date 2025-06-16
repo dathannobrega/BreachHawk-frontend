@@ -47,37 +47,12 @@ export const useTelegramAccounts = () => {
     }
   }
 
-  const patchAccount = async (
-    id: number,
-    accountData: Partial<TelegramAccountCreate>,
-  ): Promise<TelegramAccountRead> => {
-    try {
-      const updatedAccount = await SiteService.patchTelegramAccount(id, accountData)
-      setAccounts((prev) => prev.map((account) => (account.id === id ? updatedAccount : account)))
-      return updatedAccount
-    } catch (err: any) {
-      const errorMessage = err.message || "Erro ao atualizar conta do Telegram"
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    }
-  }
-
   const deleteAccount = async (id: number): Promise<void> => {
     try {
       await SiteService.deleteTelegramAccount(id)
       setAccounts((prev) => prev.filter((account) => account.id !== id))
     } catch (err: any) {
       const errorMessage = err.message || "Erro ao excluir conta do Telegram"
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    }
-  }
-
-  const getAccount = async (id: number): Promise<TelegramAccountRead> => {
-    try {
-      return await SiteService.getTelegramAccount(id)
-    } catch (err: any) {
-      const errorMessage = err.message || "Erro ao buscar conta do Telegram"
       setError(errorMessage)
       throw new Error(errorMessage)
     }
@@ -96,9 +71,7 @@ export const useTelegramAccounts = () => {
     fetchAccounts,
     createAccount,
     updateAccount,
-    patchAccount,
     deleteAccount,
-    getAccount,
     clearError,
   }
 }
