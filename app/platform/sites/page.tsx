@@ -33,6 +33,7 @@ import {
 import {
   Globe,
   Plus,
+  Play,
   Loader2,
   CheckCircle,
   XCircle,
@@ -53,13 +54,31 @@ import DashboardLayout from "@/components/dashboard-layout"
 import FormTemplate from "@/components/templates/form-template"
 import CardTemplate from "@/components/templates/card-template"
 import { useSites } from "@/hooks/use-sites"
-import { useTelegramAccounts } from "@/hooks/use-telegram-accounts"
+import { ScraperManagement } from "@/components/scraper-management"
+import { ScraperStatus } from "@/components/scraper-status"
 
 export default function SitesPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth()
   const router = useRouter()
-  const { sites, loading, error, createSite, updateSite, deleteSite, fetchSites, clearError } = useSites()
-  const { accounts: telegramAccounts, fetchAccounts: fetchTelegramAccounts } = useTelegramAccounts()
+  const {
+    sites,
+    availableScrapers,
+    telegramAccounts,
+    loading,
+    scrapersLoading,
+    error,
+    createSite,
+    updateSite,
+    deleteSite,
+    uploadScraper,
+    deleteScraper,
+    runScraper,
+    getTaskStatus,
+    fetchSites,
+    fetchAvailableScrapers,
+    fetchTelegramAccounts,
+    clearError,
+  } = useSites()
   const { toast } = useToast()
 
   // Form states
@@ -72,11 +91,12 @@ export default function SitesPage() {
     type: SiteType.WEBSITE,
     auth_type: AuthType.NONE,
     captcha_type: CaptchaType.NONE,
-    scraper: "generic",
+    scraper: availableScrapers.length > 0 ? availableScrapers[0] : "generic",
     needs_js: false,
     enabled: true,
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [runningTasks, setRunningTasks] = useState<Record<number, string>>({})
   const [refreshing, setRefreshing] = useState(false)
 
   // Delete confirmation states
@@ -91,11 +111,16 @@ export default function SitesPage() {
     }
   }, [isAuthenticated, authLoading, user, router])
 
+  // Buscar contas do Telegram apenas quando necessário (quando o tipo for Telegram)
   useEffect(() => {
-    if (isAuthenticated && (user?.role === "platform_admin" || user?.role === "admin")) {
+    if (
+      isAuthenticated &&
+      (user?.role === "platform_admin" || user?.role === "admin") &&
+      (formData.type === SiteType.TELEGRAM || sites.some((site) => site.type === SiteType.TELEGRAM))
+    ) {
       fetchTelegramAccounts()
     }
-  }, [isAuthenticated, user, fetchTelegramAccounts])
+  }, [isAuthenticated, user, formData.type, sites, fetchTelegramAccounts])
 
   if (authLoading) {
     return (
@@ -118,7 +143,7 @@ export default function SitesPage() {
       type: SiteType.WEBSITE,
       auth_type: AuthType.NONE,
       captcha_type: CaptchaType.NONE,
-      scraper: "generic",
+      scraper: availableScrapers.length > 0 ? availableScrapers[0] : "generic",
       needs_js: false,
       enabled: true,
     })
@@ -215,11 +240,73 @@ export default function SitesPage() {
     }
   }
 
+  const handleRunScraper = async (siteId: number) => {
+    try {
+      const task = await runScraper(siteId)
+      setRunningTasks((prev) => ({ ...prev, [siteId]: task.task_id }))
+
+      toast({
+        title: "Scraper Iniciado",
+        description: `Task ID: ${task.task_id}`,
+      })
+
+      // Poll task status
+      const pollStatus = async () => {
+        try {
+          const status = await getTaskStatus(task.task_id)
+          if (status.status === "SUCCESS") {
+            setRunningTasks((prev) => {
+              const newTasks = { ...prev }
+              delete newTasks[siteId]
+              return newTasks
+            })
+            toast({
+              title: "Scraper Concluído",
+              description: "Scraping executado com sucesso!",
+            })
+          } else if (status.status === "FAILURE") {
+            setRunningTasks((prev) => {
+              const newTasks = { ...prev }
+              delete newTasks[siteId]
+              return newTasks
+            })
+            toast({
+              title: "Erro no Scraper",
+              description: "Falha na execução do scraping",
+              variant: "destructive",
+            })
+          } else if (status.status === "PENDING" || status.status === "STARTED") {
+            setTimeout(pollStatus, 2000)
+          }
+        } catch (err) {
+          console.error("Error polling task status:", err)
+          setRunningTasks((prev) => {
+            const newTasks = { ...prev }
+            delete newTasks[siteId]
+            return newTasks
+          })
+        }
+      }
+
+      setTimeout(pollStatus, 2000)
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Erro ao executar scraper",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
       await fetchSites()
-      await fetchTelegramAccounts()
+      await fetchAvailableScrapers()
+      // Só buscar contas do Telegram se necessário
+      if (sites.some((site) => site.type === SiteType.TELEGRAM)) {
+        await fetchTelegramAccounts()
+      }
       toast({
         title: "Atualizado",
         description: "Dados atualizados com sucesso",
@@ -307,6 +394,7 @@ export default function SitesPage() {
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight text-blue-900">Gerenciamento de Sites</h1>
             <p className="text-blue-700">Configure sites para scraping e monitore suas execuções</p>
+            <ScraperStatus scrapers={availableScrapers} loading={scrapersLoading} error={error} />
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -337,9 +425,23 @@ export default function SitesPage() {
         {error && (
           <Alert variant="destructive" className="border-red-200 bg-red-50">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {error}
+              <Button variant="ghost" size="sm" onClick={clearError} className="ml-2">
+                Fechar
+              </Button>
+            </AlertDescription>
           </Alert>
         )}
+
+        {/* Scrapers Management */}
+        <ScraperManagement
+          availableScrapers={availableScrapers}
+          scrapersLoading={scrapersLoading}
+          onUploadScraper={uploadScraper}
+          onDeleteScraper={deleteScraper}
+          onRefresh={fetchAvailableScrapers}
+        />
 
         {/* Site Form Dialog */}
         <Dialog open={showSiteDialog} onOpenChange={(open) => !open && handleCloseDialog()}>
@@ -462,13 +564,32 @@ export default function SitesPage() {
                       <Label htmlFor="scraper" className="text-blue-900 font-medium">
                         Scraper
                       </Label>
-                      <Input
-                        id="scraper"
+                      <Select
                         value={formData.scraper}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, scraper: e.target.value }))}
-                        placeholder="generic"
-                        className="border-blue-200 focus:border-blue-400"
-                      />
+                        onValueChange={(value) => setFormData((prev) => ({ ...prev, scraper: value }))}
+                      >
+                        <SelectTrigger className="border-blue-200 focus:border-blue-400">
+                          <SelectValue placeholder="Selecione um scraper" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {scrapersLoading ? (
+                            <div className="flex items-center justify-center p-2">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              <span>Carregando scrapers...</span>
+                            </div>
+                          ) : availableScrapers && availableScrapers.length > 0 ? (
+                            availableScrapers.map((scraper) => (
+                              <SelectItem key={scraper} value={scraper}>
+                                {scraper}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-2 text-sm text-muted-foreground">
+                              Nenhum scraper disponível. Faça upload de um.
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -788,6 +909,18 @@ export default function SitesPage() {
                               >
                                 <Edit className="h-4 w-4 mr-2" />
                                 Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleRunScraper(site.id)}
+                                disabled={runningTasks[site.id] !== undefined}
+                                className="text-green-700 hover:bg-green-50"
+                              >
+                                {runningTasks[site.id] ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Play className="h-4 w-4 mr-2" />
+                                )}
+                                Executar
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
