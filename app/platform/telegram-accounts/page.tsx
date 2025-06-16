@@ -45,7 +45,7 @@ export default function TelegramAccountsPage() {
   })
 
   // Redirect if not authenticated or not platform admin
-  if (!authLoading && (!isAuthenticated || user?.role !== "platform_admin")) {
+  if (!authLoading && (!isAuthenticated || (user?.role !== "platform_admin" && user?.role !== "admin"))) {
     router.push("/login")
     return null
   }

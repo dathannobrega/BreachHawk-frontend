@@ -54,18 +54,25 @@ export class SiteService {
 
   static async createSite(site: SiteCreate): Promise<SiteRead> {
     try {
+      // Garantir que links seja um array válido
+      const siteData = {
+        ...site,
+        links: site.links || [],
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/sites/`, {
         method: "POST",
         headers: {
           ...getAuthHeaders(),
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(site),
+        body: JSON.stringify(siteData),
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.detail || "Erro ao criar site")
+        console.error("Site creation error:", error)
+        throw new Error(error.detail || JSON.stringify(error) || "Erro ao criar site")
       }
 
       return await response.json()

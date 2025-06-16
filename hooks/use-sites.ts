@@ -1,148 +1,129 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { SiteService } from "@/services/site-service"
-import type {
-  SiteRead,
-  SiteCreate,
-  SiteUpdate,
-  TaskResponse,
-  TaskStatus,
-  ScrapeLogRead,
-  TelegramAccount
-} from "@/types/site"
+import type { SiteRead, SiteCreate, SiteUpdate } from "@/types/site"
 
 export const useSites = () => {
   const [sites, setSites] = useState<SiteRead[]>([])
-  const [availableScrapers, setAvailableScrapers] = useState<string[]>([])
-  const [telegramAccounts, setTelegramAccounts] = useState<TelegramAccount[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [scrapersLoading, setScrapersLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchSites = useCallback(async () => {
-    setLoading(true)
+  const fetchSites = async () => {
     try {
+      setLoading(true)
+      setError(null)
       const data = await SiteService.getSites()
       setSites(data)
-      setError(null)
     } catch (err: any) {
-      setError(err.message || "Failed to fetch sites")
+      setError(err.message || "Erro ao carregar sites")
+      console.error("Error fetching sites:", err)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
-  const fetchAvailableScrapers = useCallback(async () => {
-    setScrapersLoading(true)
+  const createSite = async (siteData: SiteCreate): Promise<SiteRead> => {
     try {
-      const data = await SiteService.getAvailableScrapers()
-      setAvailableScrapers(data)
-      setError(null)
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch available scrapers")
-    } finally {
-      setScrapersLoading(false)
-    }
-  }, [])
+      // Garantir que links seja um array válido
+      const siteWithLinks = {
+        ...siteData,
+        links: siteData.links || [],
+      }
 
-  const fetchTelegramAccounts = useCallback(async () => {
-    try {
-      const data = await SiteService.getTelegramAccounts()
-      setTelegramAccounts(data)
-      setError(null)
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch Telegram accounts")
-    }
-  }, [])
-
-  const createSite = useCallback(async (site: SiteCreate) => {
-    try {
-      const newSite = await SiteService.createSite(site)
-      setSites(prev => [...prev, newSite])
+      const newSite = await SiteService.createSite(siteWithLinks)
+      setSites((prev) => [...prev, newSite])
       return newSite
     } catch (err: any) {
-      setError(err.message)
-      throw err
+      const errorMessage = err.message || "Erro ao criar site"
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }, [])
+  }
 
-  const updateSite = useCallback(async (id: number, site: SiteUpdate) => {
+  const updateSite = async (id: number, siteData: SiteUpdate): Promise<SiteRead> => {
     try {
-      const updatedSite = await SiteService.updateSite(id, site)
-      setSites(prev => prev.map(s => s.id === id ? updatedSite : s))
+      const updatedSite = await SiteService.updateSite(id, siteData)
+      setSites((prev) => prev.map((site) => (site.id === id ? updatedSite : site)))
       return updatedSite
     } catch (err: any) {
-      setError(err.message)
-      throw err
+      const errorMessage = err.message || "Erro ao atualizar site"
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }, [])
+  }
 
-  const deleteSite = useCallback(async (id: number) => {
+  const patchSite = async (id: number, siteData: Partial<SiteUpdate>): Promise<SiteRead> => {
+    try {
+      const updatedSite = await SiteService.patchSite(id, siteData)
+      setSites((prev) => prev.map((site) => (site.id === id ? updatedSite : site)))
+      return updatedSite
+    } catch (err: any) {
+      const errorMessage = err.message || "Erro ao atualizar site"
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    }
+  }
+
+  const deleteSite = async (id: number): Promise<void> => {
     try {
       await SiteService.deleteSite(id)
-      setSites(prev => prev.filter(s => s.id !== id))
+      setSites((prev) => prev.filter((site) => site.id !== id))
     } catch (err: any) {
-      setError(err.message)
-      throw err
+      const errorMessage = err.message || "Erro ao excluir site"
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }, [])
+  }
 
-  const uploadScraper = useCallback(async (file: File) => {
+  const getSite = async (id: number): Promise<SiteRead> => {
     try {
-      const result = await SiteService.uploadScraper(file)
-      await fetchAvailableScrapers()
-      return result
+      return await SiteService.getSite(id)
     } catch (err: any) {
-      setError(err.message)
-      throw err
+      const errorMessage = err.message || "Erro ao buscar site"
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }, [fetchAvailableScrapers])
+  }
 
-  const deleteScraper = useCallback(async (slug: string) => {
-    try {
-      await SiteService.deleteScraper(slug)
-      await fetchAvailableScrapers()
-    } catch (err: any) {
-      setError(err.message)
-      throw err
-    }
-  }, [fetchAvailableScrapers])
-
-  const runScraper = useCallback(async (siteId: number): Promise<TaskResponse> => {
+  const runScraper = async (siteId: number) => {
     try {
       return await SiteService.runScraper(siteId)
     } catch (err: any) {
-      setError(err.message)
-      throw err
+      const errorMessage = err.message || "Erro ao executar scraper"
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }, [])
+  }
 
-  const getTaskStatus = useCallback(async (taskId: string): Promise<TaskStatus> => {
+  const getTaskStatus = async (taskId: string) => {
     try {
       return await SiteService.getTaskStatus(taskId)
     } catch (err: any) {
-      setError(err.message)
-      throw err
+      const errorMessage = err.message || "Erro ao buscar status da tarefa"
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
+  }
+
+  const clearError = () => setError(null)
+
+  useEffect(() => {
+    fetchSites()
   }, [])
 
   return {
     sites,
-    availableScrapers,
-    telegramAccounts,
     loading,
-    scrapersLoading,
     error,
+    fetchSites,
     createSite,
     updateSite,
+    patchSite,
     deleteSite,
-    uploadScraper,
-    deleteScraper,
+    getSite,
     runScraper,
     getTaskStatus,
-    fetchSites,
-    fetchAvailableScrapers,
-    fetchTelegramAccounts
+    clearError,
   }
 }

@@ -31,6 +31,12 @@ export interface Credentials {
   token?: string | null
 }
 
+export interface SiteLink {
+  id?: number
+  url: string
+  created_at?: string
+}
+
 export interface TelegramAccount {
   id: number
   api_id: number
@@ -54,9 +60,10 @@ export interface TelegramAccountRead {
   // session_string não é retornado pelo backend
 }
 
+// Site interfaces baseadas na estrutura real do backend
 export interface SiteCreate {
   name: string
-  url: string
+  links: SiteLink[] // Array de links é obrigatório
   type: SiteType
   auth_type: AuthType
   captcha_type: CaptchaType
@@ -68,16 +75,25 @@ export interface SiteCreate {
   telegram_account?: number | null
 }
 
-export interface SiteRead extends SiteCreate {
+export interface SiteRead {
   id: number
-  created_at: string
+  name: string
   links: SiteLink[]
-  telegram_account_details?: TelegramAccountRead | null
+  type: SiteType
+  auth_type: AuthType
+  captcha_type: CaptchaType
+  scraper: string
+  needs_js: boolean
+  enabled: boolean
+  created_at: string
+  bypass_config?: BypassConfig | null
+  credentials?: Credentials | null
+  telegram_account?: number | null
 }
 
 export interface SiteUpdate {
   name?: string
-  url?: string
+  links?: SiteLink[]
   type?: SiteType
   auth_type?: AuthType
   captcha_type?: CaptchaType
@@ -87,13 +103,6 @@ export interface SiteUpdate {
   bypass_config?: BypassConfig | null
   credentials?: Credentials | null
   telegram_account?: number | null
-}
-
-export interface SiteLink {
-  id: number
-  site: number
-  url: string
-  created_at: string
 }
 
 export interface TaskResponse {
