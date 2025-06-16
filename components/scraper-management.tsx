@@ -213,7 +213,7 @@ export function ScraperManagement({
                 <Loader2 className="h-6 w-6 animate-spin mr-3 text-blue-600" />
                 <span className="text-blue-600">Carregando scrapers...</span>
               </div>
-            ) : availableScrapers.length > 0 ? (
+            ) : availableScrapers && availableScrapers.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {availableScrapers.map((scraper) => (
                   <div

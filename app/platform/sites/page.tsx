@@ -517,7 +517,7 @@ export default function SitesPage() {
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
                               <span>Carregando scrapers...</span>
                             </div>
-                          ) : availableScrapers.length > 0 ? (
+                          ) : (availableScrapers && availableScrapers.length > 0) ? (
                             availableScrapers.map((scraper) => (
                               <SelectItem key={scraper} value={scraper}>
                                 {scraper}

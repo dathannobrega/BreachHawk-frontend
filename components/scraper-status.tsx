@@ -27,7 +27,7 @@ export function ScraperStatus({ scrapers, loading, error }: ScraperStatusProps) 
     )
   }
 
-  if (scrapers.length === 0) {
+  if (!scrapers || scrapers.length === 0) {
     return (
       <div className="flex items-center gap-2 text-amber-600">
         <AlertCircle className="h-4 w-4" />

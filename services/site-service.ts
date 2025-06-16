@@ -285,7 +285,7 @@ export class SiteService {
   // Telegram Accounts
   static async getTelegramAccounts(): Promise<TelegramAccount[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/telegram-accounts/`, {
+      const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/`, {
         headers: getAuthHeaders(),
       })
 
@@ -303,7 +303,7 @@ export class SiteService {
 
   static async createTelegramAccount(account: Omit<TelegramAccount, "id">): Promise<TelegramAccount> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/telegram-accounts/`, {
+      const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/`, {
         method: "POST",
         headers: {
           ...getAuthHeaders(),
