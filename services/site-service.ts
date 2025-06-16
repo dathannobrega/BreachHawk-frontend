@@ -7,7 +7,8 @@ import type {
   ScrapeLogRead,
   ScraperUploadResponse,
   Snapshot,
-  TelegramAccount,
+  TelegramAccountCreate,
+  TelegramAccountRead,
 } from "@/types/site"
 import { getAuthHeaders } from "@/lib/utils"
 
@@ -283,7 +284,7 @@ export class SiteService {
   }
 
   // Telegram Accounts
-  static async getTelegramAccounts(): Promise<TelegramAccount[]> {
+  static async getTelegramAccounts(): Promise<TelegramAccountRead[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/`, {
         headers: getAuthHeaders(),
@@ -301,7 +302,25 @@ export class SiteService {
     }
   }
 
-  static async createTelegramAccount(account: Omit<TelegramAccount, "id">): Promise<TelegramAccount> {
+  static async getTelegramAccount(id: number): Promise<TelegramAccountRead> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/${id}/`, {
+        headers: getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao buscar conta do Telegram")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Error fetching telegram account:", error)
+      throw error
+    }
+  }
+
+  static async createTelegramAccount(account: TelegramAccountCreate): Promise<TelegramAccountRead> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/`, {
         method: "POST",
@@ -320,6 +339,69 @@ export class SiteService {
       return await response.json()
     } catch (error) {
       console.error("Error creating telegram account:", error)
+      throw error
+    }
+  }
+
+  static async updateTelegramAccount(id: number, account: TelegramAccountCreate): Promise<TelegramAccountRead> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/${id}/`, {
+        method: "PUT",
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(account),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao atualizar conta do Telegram")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Error updating telegram account:", error)
+      throw error
+    }
+  }
+
+  static async patchTelegramAccount(id: number, account: Partial<TelegramAccountCreate>): Promise<TelegramAccountRead> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/${id}/`, {
+        method: "PATCH",
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(account),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao atualizar conta do Telegram")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Error patching telegram account:", error)
+      throw error
+    }
+  }
+
+  static async deleteTelegramAccount(id: number): Promise<void> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/${id}/`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao excluir conta do Telegram")
+      }
+    } catch (error) {
+      console.error("Error deleting telegram account:", error)
       throw error
     }
   }

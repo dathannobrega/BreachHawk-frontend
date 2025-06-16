@@ -14,24 +14,24 @@ Esta pasta contém os arquivos necessários para criar e rodar a aplicação Nex
 
 ### Opção 1: Build a partir da pasta raiz (recomendado)
 1. Acesse a raiz do projeto e execute o build apontando para o Dockerfile na pasta docker:
-   ```sh
+   \`\`\`sh
    docker build -f docker/Dockerfile -t breachhawk-frontend .
-   ```
+   \`\`\`
 
 ### Opção 2: Build a partir da pasta docker
 1. Acesse a pasta docker:
-   ```sh
+   \`\`\`sh
    cd docker
-   ```
+   \`\`\`
 2. Construa a imagem Docker (note o uso do contexto "../" para acessar os arquivos da raiz):
-   ```sh
+   \`\`\`sh
    docker build -f Dockerfile -t breachhawk-frontend ..
-   ```
+   \`\`\`
 
 ### Executando o container
-```sh
+\`\`\`sh
 docker run -p 3000:3000 breachhawk-frontend
-```
+\`\`\`
 
 A aplicação estará disponível em http://localhost:3000.
 

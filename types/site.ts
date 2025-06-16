@@ -35,7 +35,23 @@ export interface TelegramAccount {
   id: number
   api_id: number
   api_hash: string
+  phone: string
+  session_string?: string | null // write-only field
+}
+
+export interface TelegramAccountCreate {
+  api_id: number
+  api_hash: string
+  phone: string
   session_string?: string | null
+}
+
+export interface TelegramAccountRead {
+  id: number
+  api_id: number
+  api_hash: string
+  phone: string
+  // session_string não é retornado pelo backend
 }
 
 export interface SiteCreate {
@@ -56,7 +72,7 @@ export interface SiteRead extends SiteCreate {
   id: number
   created_at: string
   links: SiteLink[]
-  telegram_account_details?: TelegramAccount | null
+  telegram_account_details?: TelegramAccountRead | null
 }
 
 export interface SiteUpdate {
