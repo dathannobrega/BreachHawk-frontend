@@ -1,120 +1,140 @@
 "use client"
 
-import React, { useMemo, useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAuth } from "@/contexts/auth-context"
+import { cn } from "@/lib/utils"
 
 interface UserAvatarProps {
-  profileImage?: string | null
-  userName: string
-  userInitials: string
   className?: string
-  size?: "sm" | "md" | "lg"
+  size?: "sm" | "md" | "lg" | "xl"
+  showFallback?: boolean
 }
 
-// Armazena as imagens já carregadas em cache no cliente
-const imageCache: Record<string, string> = {}
+// Cache simples para imagens de perfil
+const imageCache = new Map<string, string>()
+const failedImages = new Set<string>()
 
-// Componente isolado e memorizado para o avatar do usuário
-const UserAvatar = React.memo(function UserAvatar({
-  profileImage,
-  userName,
-  userInitials,
-  className = "",
-  size = "md"
-}: UserAvatarProps) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
-  const [imageData, setImageData] = useState<string | null>(null)
+export function UserAvatar({ className, size = "md", showFallback = true }: UserAvatarProps) {
+  const { user } = useAuth()
+  const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [imageError, setImageError] = useState(false)
 
-  // Tamanhos pré-definidos
+  const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+
   const sizeClasses = {
     sm: "h-6 w-6",
-    md: "h-8 w-8",
-    lg: "h-10 w-10"
+    md: "h-10 w-10",
+    lg: "h-12 w-12",
+    xl: "h-16 w-16",
   }
 
-  // Memorizar a URL da imagem de perfil
-  const imageUrl = useMemo(() => {
-    if (!profileImage || profileImage.trim() === '') {
-      return null
-    }
+  const getUserDisplayName = () => {
+    if (!user) return "Usuário"
+    if (user.first_name && user.last_name) return `${user.first_name} ${user.last_name}`
+    if (user.first_name) return user.first_name
+    if (user.username) return user.username
+    return "Usuário"
+  }
 
-    return profileImage.startsWith('http')
-      ? profileImage
-      : `${apiUrl}${profileImage}`
-  }, [profileImage, apiUrl])
+  const getUserInitials = () => {
+    if (!user) return "U"
+    if (user.first_name && user.last_name) return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
+    if (user.first_name) return user.first_name[0].toUpperCase()
+    if (user.username) return user.username[0].toUpperCase()
+    return "U"
+  }
 
-  // Carregar a imagem apenas uma vez e armazenar em cache
   useEffect(() => {
-    if (!imageUrl || imageError) return
-
-    // Se já temos esta imagem em cache, use-a imediatamente
-    if (imageCache[imageUrl]) {
-      setImageData(imageCache[imageUrl])
+    if (!user?.profile_image) {
+      setImageSrc(null)
       return
     }
 
-    // Flag para evitar problemas de memory leak se o componente desmontar
-    let isMounted = true
+    const imageUrl = `${apiUrl}${user.profile_image}`
 
-    // Função para carregar e converter a imagem para base64
-    const loadImage = async () => {
-      try {
-        const response = await fetch(imageUrl, {
-          // Evitar que o navegador use cache
-          cache: 'no-store',
-          headers: {
-            // Definir cabeçalho de cache para evitar que o navegador armazene a imagem
-            'Cache-Control': 'no-cache'
-          }
+    // Verifica se a imagem já falhou antes
+    if (failedImages.has(imageUrl)) {
+      setImageError(true)
+      return
+    }
+
+    // Verifica se a imagem está no cache
+    if (imageCache.has(imageUrl)) {
+      setImageSrc(imageCache.get(imageUrl)!)
+      setImageError(false)
+      return
+    }
+
+    // Pré-carrega a imagem para verificar se existe
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+
+    img.onload = () => {
+      // Cria um blob URL para cache local
+      fetch(imageUrl)
+        .then((response) => response.blob())
+        .then((blob) => {
+          const blobUrl = URL.createObjectURL(blob)
+          imageCache.set(imageUrl, blobUrl)
+          setImageSrc(blobUrl)
+          setImageError(false)
         })
-
-        if (!response.ok) throw new Error('Failed to load image')
-
-        const blob = await response.blob()
-        const reader = new FileReader()
-
-        reader.onload = () => {
-          if (!isMounted) return
-
-          // Armazenar no cache para uso futuro
-          const base64data = reader.result as string
-          imageCache[imageUrl] = base64data
-          setImageData(base64data)
-        }
-
-        reader.readAsDataURL(blob)
-      } catch (err) {
-        if (isMounted) {
-          console.error('Error loading avatar image:', err)
+        .catch(() => {
+          failedImages.add(imageUrl)
           setImageError(true)
-        }
+        })
+    }
+
+    img.onerror = () => {
+      failedImages.add(imageUrl)
+      setImageError(true)
+    }
+
+    img.src = imageUrl
+  }, [user?.profile_image, apiUrl])
+
+  // Cleanup blob URLs quando o componente for desmontado
+  useEffect(() => {
+    return () => {
+      if (imageSrc && imageSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(imageSrc)
       }
     }
-
-    loadImage()
-
-    // Cleanup
-    return () => {
-      isMounted = false
-    }
-  }, [imageUrl, imageError])
+  }, [imageSrc])
 
   return (
-    <Avatar className={`${sizeClasses[size]} ${className}`}>
-      {!imageError && imageData ? (
+    <Avatar className={cn(sizeClasses[size], className)}>
+      {imageSrc && !imageError ? (
         <AvatarImage
-          src={imageData}
-          alt={userName}
+          src={imageSrc || "/placeholder.svg"}
+          alt={getUserDisplayName()}
           className="object-cover"
+          onError={() => setImageError(true)}
         />
-      ) : (
-        <AvatarFallback className="text-xs bg-blue-100 text-blue-700 font-medium">
-          {userInitials}
-        </AvatarFallback>
-      )}
+      ) : showFallback ? (
+        <AvatarFallback className="bg-blue-100 text-blue-700 font-medium">{getUserInitials()}</AvatarFallback>
+      ) : null}
     </Avatar>
   )
-})
+}
 
-export default UserAvatar
+// Hook para limpar o cache quando necessário
+export function useAvatarCache() {
+  const clearCache = () => {
+    // Revoga todos os blob URLs
+    imageCache.forEach((blobUrl) => {
+      if (blobUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(blobUrl)
+      }
+    })
+    imageCache.clear()
+    failedImages.clear()
+  }
+
+  const clearFailedImages = () => {
+    failedImages.clear()
+  }
+
+  return { clearCache, clearFailedImages }
+}
