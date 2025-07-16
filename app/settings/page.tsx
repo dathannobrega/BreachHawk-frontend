@@ -313,13 +313,13 @@ export default function UserSettings() {
       return profileSettings.profileImage
     }
 
-    // Se for uma URL relativa do backend, construir URL completa
-    if (profileSettings.profileImage.startsWith("/static/")) {
-      return `${apiUrl}${profileSettings.profileImage}`
+    // Se for uma URL completa, usar diretamente
+    if (profileSettings.profileImage.startsWith("http")) {
+      return profileSettings.profileImage
     }
 
-    // Se for uma URL completa, usar diretamente
-    return profileSettings.profileImage
+    // Para URLs relativas do backend (como /media/profile_images/...), construir URL completa
+    return `${apiUrl}${profileSettings.profileImage}`
   }
 
   const getDeviceIcon = (device?: string | null) => {

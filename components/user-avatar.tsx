@@ -138,3 +138,8 @@ export function useAvatarCache() {
 
   return { clearCache, clearFailedImages }
 }
+
+// Existing named export
+// Hook export
+// NEW: allow `import UserAvatar from "@/components/user-avatar"`
+export default UserAvatar

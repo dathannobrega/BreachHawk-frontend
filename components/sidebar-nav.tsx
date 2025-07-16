@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { UserAvatar } from "@/components/user-avatar"
+import UserAvatar from "@/components/user-avatar"
 import { useAuth } from "@/contexts/auth-context"
 import {
   LayoutDashboard,
