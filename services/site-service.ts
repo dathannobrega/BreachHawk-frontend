@@ -208,10 +208,10 @@ export class SiteService {
     }
   }
 
-  // Tasks
+  // Tasks - Atualizado para usar a nova API
   static async runScraper(siteId: number): Promise<TaskResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/scrapers/run/${siteId}/`, {
+      const response = await fetch(`${API_BASE_URL}/api/scrapers/sites/${siteId}/run/`, {
         method: "POST",
         headers: getAuthHeaders(),
       })
@@ -246,12 +246,10 @@ export class SiteService {
     }
   }
 
-  // Logs
-  static async getSiteLogs(siteId?: number): Promise<ScrapeLogRead[]> {
+  // Logs - Atualizado para usar a nova API
+  static async getSiteLogs(siteId: number): Promise<ScrapeLogRead[]> {
     try {
-      const url = siteId ? `${API_BASE_URL}/api/scrapers/logs/?site=${siteId}` : `${API_BASE_URL}/api/scrapers/logs/`
-
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE_URL}/api/scrapers/sites/${siteId}/logs/`, {
         headers: getAuthHeaders(),
       })
 
@@ -263,6 +261,50 @@ export class SiteService {
       return await response.json()
     } catch (error) {
       console.error("Error fetching logs:", error)
+      throw error
+    }
+  }
+
+  // Método para buscar todos os logs (sem filtro por site)
+  static async getAllLogs(): Promise<ScrapeLogRead[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/scrapers/logs/`, {
+        headers: getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao buscar logs")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Error fetching all logs:", error)
+      throw error
+    }
+  }
+
+  // Stats - Nova funcionalidade para estatísticas
+  static async getSiteStats(siteId: number): Promise<{
+    total_runs: number
+    successful_runs: number
+    failed_runs: number
+    last_run: string | null
+    success_rate: number
+  }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/scrapers/sites/${siteId}/stats/`, {
+        headers: getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || "Erro ao buscar estatísticas")
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Error fetching site stats:", error)
       throw error
     }
   }

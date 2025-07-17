@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, CheckCircle, XCircle, RefreshCw, AlertCircle, ExternalLink, Camera } from "lucide-react"
+import { Loader2, CheckCircle, XCircle, RefreshCw, AlertCircle, ExternalLink, Camera, BarChart3 } from "lucide-react"
 import { useSites } from "@/hooks/use-sites"
 import { useToast } from "@/hooks/use-toast"
 import type { ScrapeLogRead, Snapshot } from "@/types/site"
@@ -20,13 +20,23 @@ interface SiteLogsDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+interface SiteStats {
+  total_runs: number
+  successful_runs: number
+  failed_runs: number
+  last_run: string | null
+  success_rate: number
+}
+
 export function SiteLogsDialog({ siteId, siteName, open, onOpenChange }: SiteLogsDialogProps) {
   const [logs, setLogs] = useState<ScrapeLogRead[]>([])
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
+  const [stats, setStats] = useState<SiteStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [snapshotsLoading, setSnapshotsLoading] = useState(false)
+  const [statsLoading, setStatsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"logs" | "snapshots">("logs")
+  const [activeTab, setActiveTab] = useState<"logs" | "snapshots" | "stats">("logs")
   const { getSiteLogs } = useSites()
   const { toast } = useToast()
 
@@ -69,10 +79,30 @@ export function SiteLogsDialog({ siteId, siteName, open, onOpenChange }: SiteLog
     }
   }
 
+  const fetchStats = async () => {
+    if (!siteId) return
+
+    setStatsLoading(true)
+    try {
+      const data = await SiteService.getSiteStats(siteId)
+      setStats(data)
+    } catch (err) {
+      console.error("Error fetching stats:", err)
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar estatísticas",
+        variant: "destructive",
+      })
+    } finally {
+      setStatsLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (open && siteId) {
       fetchLogs()
       fetchSnapshots()
+      fetchStats()
     }
   }, [open, siteId])
 
@@ -97,8 +127,10 @@ export function SiteLogsDialog({ siteId, siteName, open, onOpenChange }: SiteLog
   const handleRefresh = () => {
     if (activeTab === "logs") {
       fetchLogs()
-    } else {
+    } else if (activeTab === "snapshots") {
       fetchSnapshots()
+    } else if (activeTab === "stats") {
+      fetchStats()
     }
   }
 
@@ -106,9 +138,11 @@ export function SiteLogsDialog({ siteId, siteName, open, onOpenChange }: SiteLog
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[900px] bg-white border-blue-200">
         <DialogHeader className="border-b border-blue-100 pb-4">
-          <DialogTitle className="flex items-center gap-2 text-blue-900">Logs e Snapshots - {siteName}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-blue-900">
+            Logs, Snapshots e Estatísticas - {siteName}
+          </DialogTitle>
           <DialogDescription className="text-blue-700">
-            Histórico de execuções e capturas de tela do scraper para este site
+            Histórico de execuções, capturas de tela e estatísticas do scraper para este site
           </DialogDescription>
         </DialogHeader>
 
@@ -133,15 +167,26 @@ export function SiteLogsDialog({ siteId, siteName, open, onOpenChange }: SiteLog
                 <Camera className="h-4 w-4 mr-1 inline" />
                 Snapshots ({snapshots.length})
               </button>
+              <button
+                onClick={() => setActiveTab("stats")}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === "stats" ? "bg-blue-600 text-white shadow-sm" : "text-blue-700 hover:bg-blue-100"
+                }`}
+              >
+                <BarChart3 className="h-4 w-4 mr-1 inline" />
+                Estatísticas
+              </button>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleRefresh}
-              disabled={loading || snapshotsLoading}
-              className="border-blue-200 text-blue-600 hover:bg-blue-50"
+              disabled={loading || snapshotsLoading || statsLoading}
+              className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading || snapshotsLoading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${loading || snapshotsLoading || statsLoading ? "animate-spin" : ""}`}
+              />
               Atualizar
             </Button>
           </div>
@@ -207,48 +252,120 @@ export function SiteLogsDialog({ siteId, siteName, open, onOpenChange }: SiteLog
                   </TableBody>
                 </Table>
               )
-            ) : // Snapshots Tab
-            snapshotsLoading && snapshots.length === 0 ? (
+            ) : activeTab === "snapshots" ? (
+              // Snapshots Tab
+              snapshotsLoading && snapshots.length === 0 ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                </div>
+              ) : snapshots.length === 0 ? (
+                <div className="text-center py-12">
+                  <Camera className="h-12 w-12 mx-auto text-blue-400 mb-4" />
+                  <h3 className="text-lg font-medium mb-2 text-blue-900">Nenhum snapshot encontrado</h3>
+                  <p className="text-blue-700">Ainda não há capturas de tela disponíveis para este site</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                  {snapshots.map((snapshot) => (
+                    <div
+                      key={snapshot.id}
+                      className="border border-blue-200 rounded-lg overflow-hidden bg-white shadow-sm"
+                    >
+                      <div className="aspect-video bg-blue-50 flex items-center justify-center">
+                        {snapshot.screenshot ? (
+                          <img
+                            src={`data:image/png;base64,${snapshot.screenshot}`}
+                            alt={`Snapshot ${snapshot.id}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Camera className="h-8 w-8 text-blue-400" />
+                        )}
+                      </div>
+                      <div className="p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-blue-900">Snapshot #{snapshot.id}</span>
+                          <Badge variant="outline" className="border-blue-200 text-blue-700">
+                            {formatDate(snapshot.taken_at)}
+                          </Badge>
+                        </div>
+                        {snapshot.html && (
+                          <p className="text-xs text-blue-600">HTML capturado ({snapshot.html.length} caracteres)</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : // Stats Tab
+            statsLoading ? (
               <div className="flex justify-center items-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
               </div>
-            ) : snapshots.length === 0 ? (
-              <div className="text-center py-12">
-                <Camera className="h-12 w-12 mx-auto text-blue-400 mb-4" />
-                <h3 className="text-lg font-medium mb-2 text-blue-900">Nenhum snapshot encontrado</h3>
-                <p className="text-blue-700">Ainda não há capturas de tela disponíveis para este site</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-                {snapshots.map((snapshot) => (
-                  <div
-                    key={snapshot.id}
-                    className="border border-blue-200 rounded-lg overflow-hidden bg-white shadow-sm"
-                  >
-                    <div className="aspect-video bg-blue-50 flex items-center justify-center">
-                      {snapshot.screenshot ? (
-                        <img
-                          src={`data:image/png;base64,${snapshot.screenshot}`}
-                          alt={`Snapshot ${snapshot.id}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Camera className="h-8 w-8 text-blue-400" />
-                      )}
-                    </div>
-                    <div className="p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-blue-900">Snapshot #{snapshot.id}</span>
-                        <Badge variant="outline" className="border-blue-200 text-blue-700">
-                          {formatDate(snapshot.taken_at)}
-                        </Badge>
+            ) : stats ? (
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-blue-600">Total de Execuções</p>
+                        <p className="text-2xl font-bold text-blue-900">{stats.total_runs}</p>
                       </div>
-                      {snapshot.html && (
-                        <p className="text-xs text-blue-600">HTML capturado ({snapshot.html.length} caracteres)</p>
-                      )}
+                      <BarChart3 className="h-8 w-8 text-blue-500" />
                     </div>
                   </div>
-                ))}
+
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-green-600">Execuções com Sucesso</p>
+                        <p className="text-2xl font-bold text-green-900">{stats.successful_runs}</p>
+                      </div>
+                      <CheckCircle className="h-8 w-8 text-green-500" />
+                    </div>
+                  </div>
+
+                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-red-600">Execuções com Falha</p>
+                        <p className="text-2xl font-bold text-red-900">{stats.failed_runs}</p>
+                      </div>
+                      <XCircle className="h-8 w-8 text-red-500" />
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-purple-600">Taxa de Sucesso</p>
+                        <p className="text-2xl font-bold text-purple-900">{(stats.success_rate * 100).toFixed(1)}%</p>
+                      </div>
+                      <BarChart3 className="h-8 w-8 text-purple-500" />
+                    </div>
+                  </div>
+                </div>
+
+                {stats.last_run && (
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Última Execução</h4>
+                    <p className="text-lg font-semibold text-gray-900">{formatDate(stats.last_run)}</p>
+                  </div>
+                )}
+
+                {stats.total_runs === 0 && (
+                  <div className="text-center py-8">
+                    <BarChart3 className="h-12 w-12 mx-auto text-blue-400 mb-4" />
+                    <h3 className="text-lg font-medium mb-2 text-blue-900">Nenhuma estatística disponível</h3>
+                    <p className="text-blue-700">Execute o scraper para gerar estatísticas</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <AlertCircle className="h-12 w-12 mx-auto text-blue-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2 text-blue-900">Erro ao carregar estatísticas</h3>
+                <p className="text-blue-700">Não foi possível carregar as estatísticas do site</p>
               </div>
             )}
           </ScrollArea>

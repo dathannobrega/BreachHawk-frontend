@@ -46,6 +46,7 @@ import {
   FileText,
   MessageSquare,
   Phone,
+  BarChart3,
 } from "lucide-react"
 import { AuthType, CaptchaType, SiteType, type SiteCreate, type SiteRead } from "@/types/site"
 import { useToast } from "@/hooks/use-toast"
@@ -56,6 +57,7 @@ import CardTemplate from "@/components/templates/card-template"
 import { useSites } from "@/hooks/use-sites"
 import { ScraperManagement } from "@/components/scraper-management"
 import { ScraperStatus } from "@/components/scraper-status"
+import { SiteLogsDialog } from "@/components/site-logs-dialog"
 
 export default function SitesPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth()
@@ -103,6 +105,10 @@ export default function SitesPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [siteToDelete, setSiteToDelete] = useState<SiteRead | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Logs dialog states
+  const [showLogsDialog, setShowLogsDialog] = useState(false)
+  const [selectedSiteForLogs, setSelectedSiteForLogs] = useState<{ id: number; name: string } | null>(null)
 
   // Verificar autenticação
   useEffect(() => {
@@ -185,6 +191,11 @@ export default function SitesPage() {
     setShowDeleteDialog(true)
   }
 
+  const handleOpenLogsDialog = (site: SiteRead) => {
+    setSelectedSiteForLogs({ id: site.id, name: site.name })
+    setShowLogsDialog(true)
+  }
+
   const confirmDeleteSite = async () => {
     if (!siteToDelete) return
 
@@ -262,7 +273,9 @@ export default function SitesPage() {
             })
             toast({
               title: "Scraper Concluído",
-              description: "Scraping executado com sucesso!",
+              description: status.result
+                ? `${status.result.inserted || 0} itens inseridos`
+                : "Scraping executado com sucesso!",
             })
           } else if (status.status === "FAILURE") {
             setRunningTasks((prev) => {
@@ -410,7 +423,7 @@ export default function SitesPage() {
               size="icon"
               onClick={handleRefresh}
               disabled={refreshing}
-              className="border-blue-200 text-blue-600 hover:bg-blue-50"
+              className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             </Button>
@@ -503,7 +516,7 @@ export default function SitesPage() {
                     variant="outline"
                     size="sm"
                     onClick={addLink}
-                    className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                    className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Adicionar URL
@@ -783,7 +796,7 @@ export default function SitesPage() {
                   type="button"
                   variant="outline"
                   onClick={handleCloseDialog}
-                  className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                  className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
                 >
                   Cancelar
                 </Button>
@@ -818,6 +831,14 @@ export default function SitesPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Site Logs Dialog */}
+        <SiteLogsDialog
+          siteId={selectedSiteForLogs?.id || null}
+          siteName={selectedSiteForLogs?.name || ""}
+          open={showLogsDialog}
+          onOpenChange={setShowLogsDialog}
+        />
 
         {/* Sites Table */}
         <CardTemplate
@@ -921,6 +942,13 @@ export default function SitesPage() {
                                   <Play className="h-4 w-4 mr-2" />
                                 )}
                                 Executar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleOpenLogsDialog(site)}
+                                className="text-purple-700 hover:bg-purple-50"
+                              >
+                                <BarChart3 className="h-4 w-4 mr-2" />
+                                Logs & Stats
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem

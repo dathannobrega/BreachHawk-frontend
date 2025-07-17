@@ -2,143 +2,149 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { SiteService } from "@/services/site-service"
-import type { SiteRead, SiteCreate, SiteUpdate, TaskResponse, TaskStatus, TelegramAccountRead } from "@/types/site"
+import type {
+  SiteCreate,
+  SiteRead,
+  SiteUpdate,
+  TaskResponse,
+  TaskStatus,
+  ScrapeLogRead,
+  TelegramAccountRead,
+} from "@/types/site"
 
-export const useSites = () => {
+export function useSites() {
   const [sites, setSites] = useState<SiteRead[]>([])
   const [availableScrapers, setAvailableScrapers] = useState<string[]>([])
   const [telegramAccounts, setTelegramAccounts] = useState<TelegramAccountRead[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [scrapersLoading, setScrapersLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState(true)
+  const [scrapersLoading, setScrapersLoading] = useState(true)
+  const [telegramLoading, setTelegramLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Fetch sites
   const fetchSites = useCallback(async () => {
-    setLoading(true)
     try {
+      setLoading(true)
       const data = await SiteService.getSites()
-      // Adaptar resposta da API
-      if (Array.isArray(data)) {
-        setSites(data)
-      } else if (data.results) {
-        setSites(data.results)
-      } else {
-        setSites([])
-      }
+      setSites(data)
       setError(null)
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch sites")
-      setSites([])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao buscar sites")
     } finally {
       setLoading(false)
     }
   }, [])
 
+  // Fetch available scrapers
   const fetchAvailableScrapers = useCallback(async () => {
-    setScrapersLoading(true)
     try {
+      setScrapersLoading(true)
       const data = await SiteService.getAvailableScrapers()
       setAvailableScrapers(data)
-      setError(null)
-    } catch (err: any) {
-      console.warn("Failed to fetch available scrapers:", err.message)
-      setAvailableScrapers(["generic"]) // Fallback para scrapers básicos
+    } catch (err) {
+      console.error("Error fetching scrapers:", err)
+      setAvailableScrapers([])
     } finally {
       setScrapersLoading(false)
     }
   }, [])
 
+  // Fetch telegram accounts
   const fetchTelegramAccounts = useCallback(async () => {
     try {
+      setTelegramLoading(true)
       const data = await SiteService.getTelegramAccounts()
       setTelegramAccounts(data)
-    } catch (err: any) {
-      console.warn("Failed to fetch Telegram accounts:", err.message)
-      setTelegramAccounts([]) // Não mostrar erro para Telegram se não for crítico
+    } catch (err) {
+      console.error("Error fetching telegram accounts:", err)
+      setTelegramAccounts([])
+    } finally {
+      setTelegramLoading(false)
     }
   }, [])
 
-  const createSite = useCallback(async (site: SiteCreate) => {
-    try {
-      const newSite = await SiteService.createSite(site)
-      setSites((prev) => [...prev, newSite])
-      return newSite
-    } catch (err: any) {
-      setError(err.message)
-      throw err
-    }
+  // Create site
+  const createSite = useCallback(async (site: SiteCreate): Promise<SiteRead> => {
+    const newSite = await SiteService.createSite(site)
+    setSites((prev) => [...prev, newSite])
+    return newSite
   }, [])
 
-  const updateSite = useCallback(async (id: number, site: SiteUpdate) => {
-    try {
-      const updatedSite = await SiteService.updateSite(id, site)
-      setSites((prev) => prev.map((s) => (s.id === id ? updatedSite : s)))
-      return updatedSite
-    } catch (err: any) {
-      setError(err.message)
-      throw err
-    }
+  // Update site
+  const updateSite = useCallback(async (id: number, site: SiteUpdate): Promise<SiteRead> => {
+    const updatedSite = await SiteService.updateSite(id, site)
+    setSites((prev) => prev.map((s) => (s.id === id ? updatedSite : s)))
+    return updatedSite
   }, [])
 
-  const deleteSite = useCallback(async (id: number) => {
-    try {
-      await SiteService.deleteSite(id)
-      setSites((prev) => prev.filter((s) => s.id !== id))
-    } catch (err: any) {
-      setError(err.message)
-      throw err
-    }
+  // Patch site
+  const patchSite = useCallback(async (id: number, site: Partial<SiteUpdate>): Promise<SiteRead> => {
+    const updatedSite = await SiteService.patchSite(id, site)
+    setSites((prev) => prev.map((s) => (s.id === id ? updatedSite : s)))
+    return updatedSite
   }, [])
 
+  // Delete site
+  const deleteSite = useCallback(async (id: number): Promise<void> => {
+    await SiteService.deleteSite(id)
+    setSites((prev) => prev.filter((s) => s.id !== id))
+  }, [])
+
+  // Upload scraper
   const uploadScraper = useCallback(
     async (file: File) => {
-      try {
-        const result = await SiteService.uploadScraper(file)
-        await fetchAvailableScrapers()
-        return result
-      } catch (err: any) {
-        setError(err.message)
-        throw err
-      }
+      const result = await SiteService.uploadScraper(file)
+      await fetchAvailableScrapers() // Refresh scrapers list
+      return result
     },
     [fetchAvailableScrapers],
   )
 
+  // Delete scraper
   const deleteScraper = useCallback(
     async (slug: string) => {
-      try {
-        await SiteService.deleteScraper(slug)
-        await fetchAvailableScrapers()
-      } catch (err: any) {
-        setError(err.message)
-        throw err
-      }
+      await SiteService.deleteScraper(slug)
+      await fetchAvailableScrapers() // Refresh scrapers list
     },
     [fetchAvailableScrapers],
   )
 
+  // Run scraper - Atualizado para usar a nova API
   const runScraper = useCallback(async (siteId: number): Promise<TaskResponse> => {
-    try {
-      return await SiteService.runScraper(siteId)
-    } catch (err: any) {
-      setError(err.message)
-      throw err
-    }
+    return await SiteService.runScraper(siteId)
   }, [])
 
+  // Get task status
   const getTaskStatus = useCallback(async (taskId: string): Promise<TaskStatus> => {
-    try {
-      return await SiteService.getTaskStatus(taskId)
-    } catch (err: any) {
-      setError(err.message)
-      throw err
-    }
+    return await SiteService.getTaskStatus(taskId)
   }, [])
 
+  // Get site logs - Atualizado para usar a nova API
+  const getSiteLogs = useCallback(async (siteId: number): Promise<ScrapeLogRead[]> => {
+    return await SiteService.getSiteLogs(siteId)
+  }, [])
+
+  // Get all logs
+  const getAllLogs = useCallback(async (): Promise<ScrapeLogRead[]> => {
+    return await SiteService.getAllLogs()
+  }, [])
+
+  // Get site stats - Nova funcionalidade
+  const getSiteStats = useCallback(async (siteId: number) => {
+    return await SiteService.getSiteStats(siteId)
+  }, [])
+
+  // Get snapshots
+  const getSnapshots = useCallback(async (siteId?: number) => {
+    return await SiteService.getSnapshots(siteId)
+  }, [])
+
+  // Clear error
   const clearError = useCallback(() => {
     setError(null)
   }, [])
 
-  // Inicializar dados apenas uma vez
+  // Initial load
   useEffect(() => {
     fetchSites()
     fetchAvailableScrapers()
@@ -150,14 +156,20 @@ export const useSites = () => {
     telegramAccounts,
     loading,
     scrapersLoading,
+    telegramLoading,
     error,
     createSite,
     updateSite,
+    patchSite,
     deleteSite,
     uploadScraper,
     deleteScraper,
     runScraper,
     getTaskStatus,
+    getSiteLogs,
+    getAllLogs,
+    getSiteStats,
+    getSnapshots,
     fetchSites,
     fetchAvailableScrapers,
     fetchTelegramAccounts,

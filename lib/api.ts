@@ -95,6 +95,98 @@ export async function deleteSite(id: number): Promise<void> {
   }
 }
 
+// Scraper APIs
+export async function runScraper(siteId: number): Promise<{ task_id: string; status: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/scrapers/sites/${siteId}/run/`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao executar scraper")
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error("Error running scraper:", error)
+    throw error
+  }
+}
+
+export async function getTaskStatus(taskId: string): Promise<{ task_id: string; status: string; result?: any }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/scrapers/tasks/${taskId}/`, {
+      headers: getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao consultar status da tarefa")
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error("Error getting task status:", error)
+    throw error
+  }
+}
+
+export async function getSiteLogs(siteId: number): Promise<any[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/scrapers/sites/${siteId}/logs/`, {
+      headers: getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao buscar logs")
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching site logs:", error)
+    throw error
+  }
+}
+
+export async function getSiteStats(siteId: number): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/scrapers/sites/${siteId}/stats/`, {
+      headers: getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao buscar estatísticas")
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching site stats:", error)
+    throw error
+  }
+}
+
+export async function getAllLogs(): Promise<any[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/scrapers/logs/`, {
+      headers: getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao buscar todos os logs")
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching all logs:", error)
+    throw error
+  }
+}
+
 // Telegram Accounts API
 export async function getTelegramAccounts(): Promise<TelegramAccountRead[]> {
   try {
