@@ -1,15 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { searchLeaks } from "@/services/leak-service"
 import type { LeakResult } from "@/types/leak"
+import { LeakService } from "@/services/leak-service"
 
 export function useLeakSearch() {
   const [results, setResults] = useState<LeakResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const search = async (query: string) => {
+  const searchLeaks = async (query: string) => {
     if (!query.trim()) {
       setError("Digite um termo para pesquisar")
       return
@@ -19,10 +19,11 @@ export function useLeakSearch() {
     setError(null)
 
     try {
-      const response = await searchLeaks(query)
+      const response = await LeakService.searchLeaks(query)
       setResults(response.results)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao pesquisar")
+      const errorMessage = err instanceof Error ? err.message : "Erro ao realizar pesquisa"
+      setError(errorMessage)
       setResults([])
     } finally {
       setLoading(false)
@@ -38,7 +39,7 @@ export function useLeakSearch() {
     results,
     loading,
     error,
-    search,
+    searchLeaks,
     clearResults,
   }
 }

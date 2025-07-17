@@ -166,17 +166,41 @@ export class SiteService {
 
   static async uploadScraper(file: File): Promise<ScraperUploadResponse> {
     try {
+      // Validação no frontend
+      if (!file.name.endsWith(".py")) {
+        throw new Error("Apenas arquivos .py são aceitos")
+      }
+
       const formData = new FormData()
       formData.append("file", file)
 
+      const token = localStorage.getItem("access_token")
       const response = await fetch(`${API_BASE_URL}/api/scrapers/upload/`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Não incluir Content-Type para FormData - o browser define automaticamente
+        },
         body: formData,
       })
 
       if (!response.ok) {
         const error = await response.json()
+
+        // Tratamento específico dos erros do backend
+        if (response.status === 400) {
+          if (error.detail === "No file provided") {
+            throw new Error("Nenhum arquivo foi fornecido")
+          } else if (error.detail === "Apenas arquivos .py") {
+            throw new Error("Apenas arquivos Python (.py) são aceitos")
+          } else if (error.detail === "Scraper inválido") {
+            throw new Error("O scraper não implementa a interface correta ou não se registra no registry")
+          } else {
+            // Erro de importação/execução do módulo
+            throw new Error(`Erro no scraper: ${error.detail}`)
+          }
+        }
+
         throw new Error(error.detail || "Erro ao fazer upload do scraper")
       }
 

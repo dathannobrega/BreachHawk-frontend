@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Upload, Loader2, Trash2, Settings, AlertCircle, CheckCircle, FileCode } from "lucide-react"
+import { Upload, Loader2, Trash2, Settings, AlertCircle, CheckCircle, FileCode, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import CardTemplate from "@/components/templates/card-template"
 
@@ -42,6 +42,7 @@ export function ScraperManagement({
   const [scraperToDelete, setScraperToDelete] = useState<string | null>(null)
   const [isDeletingScraper, setIsDeletingScraper] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const handleScraperUpload = async () => {
     if (!scraperFile) {
@@ -65,6 +66,7 @@ export function ScraperManagement({
 
     setIsUploadingFile(true)
     setUploadSuccess(null)
+    setUploadError(null)
 
     try {
       const result = await onUploadScraper(scraperFile)
@@ -85,11 +87,17 @@ export function ScraperManagement({
       setTimeout(() => setUploadSuccess(null), 5000)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro ao fazer upload do scraper"
+
+      setUploadError(errorMessage)
+
       toast({
         title: "Erro no Upload",
         description: errorMessage,
         variant: "destructive",
       })
+
+      // Auto-hide error message after 8 seconds
+      setTimeout(() => setUploadError(null), 8000)
     } finally {
       setIsUploadingFile(false)
     }
@@ -130,6 +138,7 @@ export function ScraperManagement({
     const file = e.target.files?.[0] || null
     setScraperFile(file)
     setUploadSuccess(null) // Clear success message when new file is selected
+    setUploadError(null) // Clear error message when new file is selected
   }
 
   return (
@@ -181,6 +190,7 @@ export function ScraperManagement({
                 <p>• Apenas arquivos .py são aceitos</p>
                 <p>• O scraper deve implementar a interface correta e registrar-se no registry</p>
                 <p>• Tamanho máximo: 10MB</p>
+                <p>• O arquivo será validado e importado automaticamente</p>
               </div>
             </div>
 
@@ -189,6 +199,30 @@ export function ScraperManagement({
               <Alert className="border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">{uploadSuccess}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Error Message */}
+            {uploadError && (
+              <Alert className="border-red-200 bg-red-50" variant="destructive">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800">
+                  <div className="space-y-1">
+                    <p className="font-medium">Erro no Upload:</p>
+                    <p>{uploadError}</p>
+                    {uploadError.includes("Erro no scraper:") && (
+                      <div className="mt-2 text-xs">
+                        <p>Verifique se o scraper:</p>
+                        <ul className="list-disc list-inside ml-2 space-y-1">
+                          <li>Implementa a interface correta</li>
+                          <li>Se registra no registry do sistema</li>
+                          <li>Não possui erros de sintaxe</li>
+                          <li>Importa todas as dependências necessárias</li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </AlertDescription>
               </Alert>
             )}
           </div>
@@ -202,7 +236,7 @@ export function ScraperManagement({
                 size="sm"
                 onClick={onRefresh}
                 disabled={scrapersLoading}
-                className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
               >
                 {scrapersLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Atualizar"}
               </Button>

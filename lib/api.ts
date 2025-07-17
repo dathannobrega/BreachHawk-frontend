@@ -1,13 +1,34 @@
 import type { SiteRead, SiteCreate, SiteUpdate, TelegramAccountRead, TelegramAccountCreate } from "@/types/site"
-import { getAuthHeaders } from "@/lib/utils"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+
+export const api = {
+  baseURL: API_BASE_URL,
+
+  // Helper para headers de autenticação
+  getAuthHeaders: () => {
+    const token = localStorage.getItem("access_token")
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    }
+  },
+
+  // Helper para headers de upload
+  getUploadHeaders: () => {
+    const token = localStorage.getItem("access_token")
+    return {
+      Authorization: `Bearer ${token}`,
+      // Não incluir Content-Type para FormData
+    }
+  },
+}
 
 // Sites API
 export async function getSites(page = 1, limit = 10): Promise<{ results: SiteRead[]; count: number }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sites/?page=${page}&limit=${limit}`, {
-      headers: getAuthHeaders(),
+    const response = await fetch(`${api.baseURL}/api/sites/?page=${page}&limit=${limit}`, {
+      headers: api.getAuthHeaders(),
     })
 
     if (!response.ok) {
@@ -34,12 +55,9 @@ export async function getSites(page = 1, limit = 10): Promise<{ results: SiteRea
 
 export async function createSite(siteData: SiteCreate): Promise<SiteRead> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sites/`, {
+    const response = await fetch(`${api.baseURL}/api/sites/`, {
       method: "POST",
-      headers: {
-        ...getAuthHeaders(),
-        "Content-Type": "application/json",
-      },
+      headers: api.getAuthHeaders(),
       body: JSON.stringify(siteData),
     })
 
@@ -57,12 +75,9 @@ export async function createSite(siteData: SiteCreate): Promise<SiteRead> {
 
 export async function updateSite({ id, data }: { id: number; data: SiteUpdate }): Promise<SiteRead> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sites/${id}/`, {
+    const response = await fetch(`${api.baseURL}/api/sites/${id}/`, {
       method: "PUT",
-      headers: {
-        ...getAuthHeaders(),
-        "Content-Type": "application/json",
-      },
+      headers: api.getAuthHeaders(),
       body: JSON.stringify(data),
     })
 
@@ -80,9 +95,9 @@ export async function updateSite({ id, data }: { id: number; data: SiteUpdate })
 
 export async function deleteSite(id: number): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sites/${id}/`, {
+    const response = await fetch(`${api.baseURL}/api/sites/${id}/`, {
       method: "DELETE",
-      headers: getAuthHeaders(),
+      headers: api.getAuthHeaders(),
     })
 
     if (!response.ok) {
@@ -98,9 +113,9 @@ export async function deleteSite(id: number): Promise<void> {
 // Scraper APIs
 export async function runScraper(siteId: number): Promise<{ task_id: string; status: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scrapers/sites/${siteId}/run/`, {
+    const response = await fetch(`${api.baseURL}/api/scrapers/sites/${siteId}/run/`, {
       method: "POST",
-      headers: getAuthHeaders(),
+      headers: api.getAuthHeaders(),
     })
 
     if (!response.ok) {
@@ -117,8 +132,8 @@ export async function runScraper(siteId: number): Promise<{ task_id: string; sta
 
 export async function getTaskStatus(taskId: string): Promise<{ task_id: string; status: string; result?: any }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scrapers/tasks/${taskId}/`, {
-      headers: getAuthHeaders(),
+    const response = await fetch(`${api.baseURL}/api/scrapers/tasks/${taskId}/`, {
+      headers: api.getAuthHeaders(),
     })
 
     if (!response.ok) {
@@ -135,8 +150,8 @@ export async function getTaskStatus(taskId: string): Promise<{ task_id: string; 
 
 export async function getSiteLogs(siteId: number): Promise<any[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scrapers/sites/${siteId}/logs/`, {
-      headers: getAuthHeaders(),
+    const response = await fetch(`${api.baseURL}/api/scrapers/sites/${siteId}/logs/`, {
+      headers: api.getAuthHeaders(),
     })
 
     if (!response.ok) {
@@ -153,8 +168,8 @@ export async function getSiteLogs(siteId: number): Promise<any[]> {
 
 export async function getSiteStats(siteId: number): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scrapers/sites/${siteId}/stats/`, {
-      headers: getAuthHeaders(),
+    const response = await fetch(`${api.baseURL}/api/scrapers/sites/${siteId}/stats/`, {
+      headers: api.getAuthHeaders(),
     })
 
     if (!response.ok) {
@@ -171,8 +186,8 @@ export async function getSiteStats(siteId: number): Promise<any> {
 
 export async function getAllLogs(): Promise<any[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scrapers/logs/`, {
-      headers: getAuthHeaders(),
+    const response = await fetch(`${api.baseURL}/api/scrapers/logs/`, {
+      headers: api.getAuthHeaders(),
     })
 
     if (!response.ok) {
@@ -190,8 +205,8 @@ export async function getAllLogs(): Promise<any[]> {
 // Telegram Accounts API
 export async function getTelegramAccounts(): Promise<TelegramAccountRead[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/`, {
-      headers: getAuthHeaders(),
+    const response = await fetch(`${api.baseURL}/api/sites/telegram-accounts/`, {
+      headers: api.getAuthHeaders(),
     })
 
     if (!response.ok) {
@@ -208,12 +223,9 @@ export async function getTelegramAccounts(): Promise<TelegramAccountRead[]> {
 
 export async function createTelegramAccount(accountData: TelegramAccountCreate): Promise<TelegramAccountRead> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/`, {
+    const response = await fetch(`${api.baseURL}/api/sites/telegram-accounts/`, {
       method: "POST",
-      headers: {
-        ...getAuthHeaders(),
-        "Content-Type": "application/json",
-      },
+      headers: api.getAuthHeaders(),
       body: JSON.stringify(accountData),
     })
 
@@ -234,12 +246,9 @@ export async function updateTelegramAccount({
   data,
 }: { id: number; data: TelegramAccountCreate }): Promise<TelegramAccountRead> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/${id}/`, {
+    const response = await fetch(`${api.baseURL}/api/sites/telegram-accounts/${id}/`, {
       method: "PUT",
-      headers: {
-        ...getAuthHeaders(),
-        "Content-Type": "application/json",
-      },
+      headers: api.getAuthHeaders(),
       body: JSON.stringify(data),
     })
 
@@ -257,9 +266,9 @@ export async function updateTelegramAccount({
 
 export async function deleteTelegramAccount(id: number): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sites/telegram-accounts/${id}/`, {
+    const response = await fetch(`${api.baseURL}/api/sites/telegram-accounts/${id}/`, {
       method: "DELETE",
-      headers: getAuthHeaders(),
+      headers: api.getAuthHeaders(),
     })
 
     if (!response.ok) {
