@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { MonitoringService } from "@/services/monitoring-service"
-import type { MonitoredResource, MonitoredResourceCreate, MonitoredResourceUpdate, Alert } from "@/types/monitoring"
+import type {
+  MonitoredResource,
+  CreateMonitoredResourceRequest,
+  UpdateMonitoredResourceRequest,
+  Alert,
+  MonitoringStats,
+} from "@/types/monitoring"
 
 export function useMonitoredResources() {
   const [resources, setResources] = useState<MonitoredResource[]>([])
@@ -13,49 +19,54 @@ export function useMonitoredResources() {
     try {
       setLoading(true)
       setError(null)
-      const data = await MonitoringService.getMonitoredResources()
+      const data = await MonitoringService.getResources()
       setResources(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro desconhecido")
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Erro ao carregar recursos")
     } finally {
       setLoading(false)
     }
   }
 
-  const createResource = async (data: MonitoredResourceCreate) => {
+  const createResource = async (data: CreateMonitoredResourceRequest): Promise<boolean> => {
     try {
-      const newResource = await MonitoringService.createMonitoredResource(data)
-      setResources((prev) => [newResource, ...prev])
-      return newResource
-    } catch (err) {
-      throw err
+      const newResource = await MonitoringService.createResource(data)
+      setResources((prev) => [...prev, newResource])
+      return true
+    } catch (err: any) {
+      if (err.response?.status === 400) {
+        throw new Error(err.response.data.detail || "Recurso já monitorado")
+      }
+      throw new Error("Erro ao criar recurso")
     }
   }
 
-  const updateResource = async (id: number, data: MonitoredResourceUpdate) => {
+  const updateResource = async (id: number, data: UpdateMonitoredResourceRequest): Promise<boolean> => {
     try {
-      const updatedResource = await MonitoringService.updateMonitoredResource(id, data)
-      setResources((prev) => prev.map((resource) => (resource.id === id ? updatedResource : resource)))
-      return updatedResource
-    } catch (err) {
-      throw err
+      const updatedResource = await MonitoringService.updateResource(id, data)
+      setResources((prev) => prev.map((r) => (r.id === id ? updatedResource : r)))
+      return true
+    } catch (err: any) {
+      if (err.response?.status === 400) {
+        throw new Error(err.response.data.detail || "Recurso já monitorado")
+      }
+      if (err.response?.status === 404) {
+        throw new Error("Recurso não encontrado")
+      }
+      throw new Error("Erro ao atualizar recurso")
     }
   }
 
-  const deleteResource = async (id: number) => {
+  const deleteResource = async (id: number): Promise<boolean> => {
     try {
-      await MonitoringService.deleteMonitoredResource(id)
-      setResources((prev) => prev.filter((resource) => resource.id !== id))
-    } catch (err) {
-      throw err
-    }
-  }
-
-  const getResource = async (id: number) => {
-    try {
-      return await MonitoringService.getMonitoredResource(id)
-    } catch (err) {
-      throw err
+      await MonitoringService.deleteResource(id)
+      setResources((prev) => prev.filter((r) => r.id !== id))
+      return true
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        throw new Error("Recurso não encontrado")
+      }
+      throw new Error("Erro ao excluir recurso")
     }
   }
 
@@ -67,11 +78,10 @@ export function useMonitoredResources() {
     resources,
     loading,
     error,
+    refetch: fetchResources,
     createResource,
     updateResource,
     deleteResource,
-    getResource,
-    refetch: fetchResources,
   }
 }
 
@@ -86,8 +96,8 @@ export function useAlerts() {
       setError(null)
       const data = await MonitoringService.getAlerts()
       setAlerts(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro desconhecido")
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Erro ao carregar alertas")
     } finally {
       setLoading(false)
     }
@@ -102,5 +112,35 @@ export function useAlerts() {
     loading,
     error,
     refetch: fetchAlerts,
+  }
+}
+
+export function useMonitoringStats() {
+  const [stats, setStats] = useState<MonitoringStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await MonitoringService.getStats()
+      setStats(data)
+    } catch (err: any) {
+      setError("Erro ao carregar estatísticas")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchStats()
+  }, [])
+
+  return {
+    stats,
+    loading,
+    error,
+    refetch: fetchStats,
   }
 }

@@ -1,146 +1,60 @@
-import type { MonitoredResource, MonitoredResourceCreate, MonitoredResourceUpdate, Alert } from "@/types/monitoring"
-import { getAuthHeaders } from "@/lib/utils"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+import { api } from "@/lib/api"
+import type {
+  MonitoredResource,
+  CreateMonitoredResourceRequest,
+  UpdateMonitoredResourceRequest,
+  Alert,
+  MonitoringStats,
+} from "@/types/monitoring"
 
 export class MonitoringService {
-  // Listar todos os recursos monitorados do usuário
-  static async getMonitoredResources(): Promise<MonitoredResource[]> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/monitoring/resources/`, {
-        headers: getAuthHeaders(),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao buscar recursos monitorados")
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error("Error fetching monitored resources:", error)
-      throw error
-    }
+  // Recursos monitorados
+  static async getResources(): Promise<MonitoredResource[]> {
+    const response = await api.get("/api/monitoring/resources/")
+    return response.data
   }
 
-  // Consultar recurso específico
-  static async getMonitoredResource(id: number): Promise<MonitoredResource> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/monitoring/resources/${id}/`, {
-        headers: getAuthHeaders(),
-      })
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Recurso não encontrado ou não pertence ao usuário")
-        }
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao buscar recurso")
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error("Error fetching monitored resource:", error)
-      throw error
-    }
+  static async getResource(id: number): Promise<MonitoredResource> {
+    const response = await api.get(`/api/monitoring/resources/${id}/`)
+    return response.data
   }
 
-  // Criar novo recurso monitorado
-  static async createMonitoredResource(data: MonitoredResourceCreate): Promise<MonitoredResource> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/monitoring/resources/`, {
-        method: "POST",
-        headers: {
-          ...getAuthHeaders(),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        if (response.status === 400) {
-          throw new Error(error.detail || "Recurso já monitorado")
-        }
-        throw new Error(error.detail || "Erro ao criar recurso monitorado")
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error("Error creating monitored resource:", error)
-      throw error
-    }
+  static async createResource(data: CreateMonitoredResourceRequest): Promise<MonitoredResource> {
+    const response = await api.post("/api/monitoring/resources/", data)
+    return response.data
   }
 
-  // Atualizar recurso monitorado
-  static async updateMonitoredResource(id: number, data: MonitoredResourceUpdate): Promise<MonitoredResource> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/monitoring/resources/${id}/`, {
-        method: "PUT",
-        headers: {
-          ...getAuthHeaders(),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Recurso não encontrado ou não pertence ao usuário")
-        }
-        const error = await response.json()
-        if (response.status === 400) {
-          throw new Error(error.detail || "Recurso já monitorado")
-        }
-        throw new Error(error.detail || "Erro ao atualizar recurso")
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error("Error updating monitored resource:", error)
-      throw error
-    }
+  static async updateResource(id: number, data: UpdateMonitoredResourceRequest): Promise<MonitoredResource> {
+    const response = await api.put(`/api/monitoring/resources/${id}/`, data)
+    return response.data
   }
 
-  // Excluir recurso monitorado
-  static async deleteMonitoredResource(id: number): Promise<void> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/monitoring/resources/${id}/`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      })
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Recurso não encontrado ou não pertence ao usuário")
-        }
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao excluir recurso monitorado")
-      }
-
-      // Status 204 não tem corpo de resposta
-    } catch (error) {
-      console.error("Error deleting monitored resource:", error)
-      throw error
-    }
+  static async deleteResource(id: number): Promise<void> {
+    await api.delete(`/api/monitoring/resources/${id}/`)
   }
 
-  // Listar alertas do usuário
+  // Alertas
   static async getAlerts(): Promise<Alert[]> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/monitoring/alerts/`, {
-        headers: getAuthHeaders(),
-      })
+    const response = await api.get("/api/monitoring/alerts/")
+    return response.data
+  }
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Erro ao buscar alertas")
-      }
+  // Estatísticas (simuladas - implementar quando disponível no backend)
+  static async getStats(): Promise<MonitoringStats> {
+    const [resources, alerts] = await Promise.all([this.getResources(), this.getAlerts()])
 
-      return await response.json()
-    } catch (error) {
-      console.error("Error fetching alerts:", error)
-      throw error
+    const now = new Date()
+    const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    const last7days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+    const alertsLast24h = alerts.filter((alert) => new Date(alert.created_at) >= last24h).length
+    const alertsLast7days = alerts.filter((alert) => new Date(alert.created_at) >= last7days).length
+
+    return {
+      total_resources: resources.length,
+      total_alerts: alerts.length,
+      alerts_last_7_days: alertsLast7days,
+      alerts_last_24h: alertsLast24h,
     }
   }
 }

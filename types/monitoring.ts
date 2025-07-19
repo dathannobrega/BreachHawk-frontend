@@ -4,11 +4,11 @@ export interface MonitoredResource {
   created_at: string
 }
 
-export interface MonitoredResourceCreate {
+export interface CreateMonitoredResourceRequest {
   keyword: string
 }
 
-export interface MonitoredResourceUpdate {
+export interface UpdateMonitoredResourceRequest {
   keyword: string
 }
 
@@ -16,14 +16,14 @@ export interface LeakData {
   id: number
   site: number | null
   company: string
-  country: string
+  country: string | null
   found_at: string
   source_url: string
   views: number | null
   publication_date: string | null
   amount_of_data: string | null
-  information: string
-  comment: string
+  information: string | null
+  comment: string | null
   download_links: string | null
   rar_password: string | null
 }
@@ -35,6 +35,9 @@ export interface Alert {
   created_at: string
 }
 
-export interface ApiError {
-  detail: string
+export interface MonitoringStats {
+  total_resources: number
+  total_alerts: number
+  alerts_last_7_days: number
+  alerts_last_24h: number
 }
