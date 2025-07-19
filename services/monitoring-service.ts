@@ -33,13 +33,21 @@ export class MonitoringService {
     await api.delete(`/api/monitoring/resources/${id}/`)
   }
 
-  // Alertas
+  // Alertas - integração com as APIs fornecidas
   static async getAlerts(): Promise<Alert[]> {
     const response = await api.get("/api/monitoring/alerts/")
     return response.data
   }
 
-  // Estatísticas (simuladas - implementar quando disponível no backend)
+  // Reconhecer alerta
+  static async acknowledgeAlert(alertId: number, acknowledged = true): Promise<{ acknowledged: boolean }> {
+    const response = await api.patch(`/api/monitoring/alerts/${alertId}/ack/`, {
+      acknowledged,
+    })
+    return response.data
+  }
+
+  // Estatísticas (calculadas a partir dos dados)
   static async getStats(): Promise<MonitoringStats> {
     const [resources, alerts] = await Promise.all([this.getResources(), this.getAlerts()])
 

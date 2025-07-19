@@ -103,6 +103,16 @@ export function useAlerts() {
     }
   }
 
+  const acknowledgeAlert = async (alertId: number, acknowledged = true): Promise<boolean> => {
+    try {
+      await MonitoringService.acknowledgeAlert(alertId, acknowledged)
+      setAlerts((prev) => prev.map((alert) => (alert.id === alertId ? { ...alert, acknowledged } : alert)))
+      return true
+    } catch (err: any) {
+      throw new Error("Erro ao reconhecer alerta")
+    }
+  }
+
   useEffect(() => {
     fetchAlerts()
   }, [])
@@ -112,6 +122,7 @@ export function useAlerts() {
     loading,
     error,
     refetch: fetchAlerts,
+    acknowledgeAlert,
   }
 }
 

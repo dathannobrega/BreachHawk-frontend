@@ -29,6 +29,7 @@ import {
   ChevronDown,
   ChevronRight,
   Package,
+  Target,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -45,6 +46,11 @@ const baseNavigation: NavItem[] = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Recursos Monitorados",
+    href: "/resources",
+    icon: Target,
   },
   {
     title: "Pesquisar",
