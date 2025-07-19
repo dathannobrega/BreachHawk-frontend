@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { AlertTriangle, Plus, Trash2, Search, Eye, Calendar, ExternalLink } from "lucide-react"
+import { AlertTriangle, Plus, Trash2, Search, Eye, Calendar, ExternalLink, Edit } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useMonitoredResources, useAlerts } from "@/hooks/use-monitoring"
 import DashboardLayout from "@/components/dashboard-layout"
@@ -24,12 +24,16 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { toast } from "@/hooks/use-toast"
 
 export default function MonitoringPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth()
   const router = useRouter()
   const [newKeyword, setNewKeyword] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editKeyword, setEditKeyword] = useState("")
+  const [editingResource, setEditingResource] = useState<number | null>(null)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -38,6 +42,7 @@ export default function MonitoringPage() {
     loading: resourcesLoading,
     error: resourcesError,
     createResource,
+    updateResource,
     deleteResource,
   } = useMonitoredResources()
 
@@ -47,13 +52,13 @@ export default function MonitoringPage() {
     if (!authLoading && !isAuthenticated) {
       router.push("/login")
     }
-  }, [isAuthenticated, authLoading])
+  }, [isAuthenticated, authLoading, router])
 
   useEffect(() => {
     if (user && !["admin", "platform_admin"].includes(user.role)) {
       router.push("/dashboard")
     }
-  }, [user])
+  }, [user, router])
 
   if (authLoading) {
     return (
@@ -75,22 +80,75 @@ export default function MonitoringPage() {
       setSubmitError(null)
       await createResource({ keyword: newKeyword.trim() })
       setNewKeyword("")
-      setIsDialogOpen(false)
+      setIsCreateDialogOpen(false)
+      toast({
+        title: "Sucesso",
+        description: "Palavra-chave criada com sucesso!",
+      })
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Erro ao criar recurso")
+      const errorMessage = error instanceof Error ? error.message : "Erro ao criar recurso"
+      setSubmitError(errorMessage)
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleDeleteResource = async (id: number) => {
-    if (!confirm("Tem certeza que deseja excluir este recurso monitorado?")) return
+  const handleEditResource = async () => {
+    if (!editKeyword.trim() || !editingResource) return
+
+    try {
+      setIsSubmitting(true)
+      setSubmitError(null)
+      await updateResource(editingResource, { keyword: editKeyword.trim() })
+      setEditKeyword("")
+      setEditingResource(null)
+      setIsEditDialogOpen(false)
+      toast({
+        title: "Sucesso",
+        description: "Palavra-chave atualizada com sucesso!",
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Erro ao atualizar recurso"
+      setSubmitError(errorMessage)
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteResource = async (id: number, keyword: string) => {
+    if (!confirm(`Tem certeza que deseja excluir a palavra-chave "${keyword}"?`)) return
 
     try {
       await deleteResource(id)
+      toast({
+        title: "Sucesso",
+        description: "Palavra-chave excluída com sucesso!",
+      })
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Erro ao excluir recurso")
+      const errorMessage = error instanceof Error ? error.message : "Erro ao excluir recurso"
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      })
     }
+  }
+
+  const openEditDialog = (resource: { id: number; keyword: string }) => {
+    setEditingResource(resource.id)
+    setEditKeyword(resource.keyword)
+    setIsEditDialogOpen(true)
+    setSubmitError(null)
   }
 
   const formatDate = (dateString: string) => {
@@ -104,7 +162,6 @@ export default function MonitoringPage() {
   }
 
   const getSeverityColor = (company: string) => {
-    // Lógica simples para determinar severidade baseada no nome da empresa
     const keywords = ["admin", "root", "password", "database", "api"]
     const hasHighRisk = keywords.some((keyword) => company.toLowerCase().includes(keyword))
     return hasHighRisk ? "bg-red-500" : "bg-yellow-500"
@@ -202,7 +259,7 @@ export default function MonitoringPage() {
                     <CardTitle className="text-blue-900">Palavras-chave Monitoradas</CardTitle>
                     <CardDescription>Gerencie as palavras-chave que serão monitoradas nos vazamentos</CardDescription>
                   </div>
-                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                     <DialogTrigger asChild>
                       <Button className="bg-blue-600 hover:bg-blue-700">
                         <Plus className="h-4 w-4 mr-2" />
@@ -235,7 +292,15 @@ export default function MonitoringPage() {
                         )}
                       </div>
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsCreateDialogOpen(false)
+                            setSubmitError(null)
+                            setNewKeyword("")
+                          }}
+                          disabled={isSubmitting}
+                        >
                           Cancelar
                         </Button>
                         <Button
@@ -277,6 +342,7 @@ export default function MonitoringPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>ID</TableHead>
                         <TableHead>Palavra-chave</TableHead>
                         <TableHead>Data de Criação</TableHead>
                         <TableHead>Alertas Gerados</TableHead>
@@ -286,6 +352,9 @@ export default function MonitoringPage() {
                     <TableBody>
                       {resources.map((resource) => (
                         <TableRow key={resource.id}>
+                          <TableCell>
+                            <Badge variant="outline">#{resource.id}</Badge>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                               {resource.keyword}
@@ -298,14 +367,24 @@ export default function MonitoringPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDeleteResource(resource.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openEditDialog(resource)}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDeleteResource(resource.id, resource.keyword)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -353,6 +432,9 @@ export default function MonitoringPage() {
                                 <div className={`w-3 h-3 rounded-full ${getSeverityColor(alert.leak.company)}`} />
                                 <h3 className="font-semibold text-slate-900">{alert.leak.company}</h3>
                                 <Badge variant="outline" className="text-xs">
+                                  Alerta #{alert.id}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
                                   Recurso #{alert.resource}
                                 </Badge>
                               </div>
@@ -360,7 +442,7 @@ export default function MonitoringPage() {
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                 <div>
                                   <p className="text-slate-600">
-                                    <strong>Encontrado em:</strong> {formatDate(alert.leak.found_at)}
+                                    <strong>Vazamento encontrado:</strong> {formatDate(alert.leak.found_at)}
                                   </p>
                                   <p className="text-slate-600">
                                     <strong>Alerta criado:</strong> {formatDate(alert.created_at)}
@@ -382,6 +464,11 @@ export default function MonitoringPage() {
                                       <strong>Quantidade de dados:</strong> {alert.leak.amount_of_data}
                                     </p>
                                   )}
+                                  {alert.leak.publication_date && (
+                                    <p className="text-slate-600">
+                                      <strong>Data de publicação:</strong> {formatDate(alert.leak.publication_date)}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
 
@@ -397,6 +484,22 @@ export default function MonitoringPage() {
                                 <div className="mt-3 p-3 bg-blue-50 rounded-lg">
                                   <p className="text-sm text-blue-700">
                                     <strong>Comentário:</strong> {alert.leak.comment}
+                                  </p>
+                                </div>
+                              )}
+
+                              {alert.leak.download_links && (
+                                <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
+                                  <p className="text-sm text-yellow-700">
+                                    <strong>Links de download:</strong> {alert.leak.download_links}
+                                  </p>
+                                </div>
+                              )}
+
+                              {alert.leak.rar_password && (
+                                <div className="mt-3 p-3 bg-red-50 rounded-lg">
+                                  <p className="text-sm text-red-700">
+                                    <strong>Senha RAR:</strong> {alert.leak.rar_password}
                                   </p>
                                 </div>
                               )}
@@ -423,6 +526,62 @@ export default function MonitoringPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Dialog de Edição */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Palavra-chave</DialogTitle>
+              <DialogDescription>Atualize a palavra-chave monitorada</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-keyword">Palavra-chave</Label>
+                <Input
+                  id="edit-keyword"
+                  value={editKeyword}
+                  onChange={(e) => setEditKeyword(e.target.value)}
+                  placeholder="Ex: acme, empresa, dominio.com"
+                  className="mt-1"
+                />
+              </div>
+              {submitError && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{submitError}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false)
+                  setSubmitError(null)
+                  setEditKeyword("")
+                  setEditingResource(null)
+                }}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleEditResource}
+                disabled={isSubmitting || !editKeyword.trim()}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Atualizando...
+                  </>
+                ) : (
+                  "Atualizar"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   )

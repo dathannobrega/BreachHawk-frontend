@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { MonitoringService } from "@/services/monitoring-service"
-import type { MonitoredResource, MonitoredResourceCreate, Alert } from "@/types/monitoring"
+import type { MonitoredResource, MonitoredResourceCreate, MonitoredResourceUpdate, Alert } from "@/types/monitoring"
 
 export function useMonitoredResources() {
   const [resources, setResources] = useState<MonitoredResource[]>([])
@@ -32,10 +32,28 @@ export function useMonitoredResources() {
     }
   }
 
+  const updateResource = async (id: number, data: MonitoredResourceUpdate) => {
+    try {
+      const updatedResource = await MonitoringService.updateMonitoredResource(id, data)
+      setResources((prev) => prev.map((resource) => (resource.id === id ? updatedResource : resource)))
+      return updatedResource
+    } catch (err) {
+      throw err
+    }
+  }
+
   const deleteResource = async (id: number) => {
     try {
       await MonitoringService.deleteMonitoredResource(id)
       setResources((prev) => prev.filter((resource) => resource.id !== id))
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const getResource = async (id: number) => {
+    try {
+      return await MonitoringService.getMonitoredResource(id)
     } catch (err) {
       throw err
     }
@@ -50,7 +68,9 @@ export function useMonitoredResources() {
     loading,
     error,
     createResource,
+    updateResource,
     deleteResource,
+    getResource,
     refetch: fetchResources,
   }
 }

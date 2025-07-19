@@ -8,6 +8,10 @@ export interface MonitoredResourceCreate {
   keyword: string
 }
 
+export interface MonitoredResourceUpdate {
+  keyword: string
+}
+
 export interface LeakData {
   id: number
   site: number | null
@@ -29,4 +33,8 @@ export interface Alert {
   resource: number
   leak: LeakData
   created_at: string
+}
+
+export interface ApiError {
+  detail: string
 }

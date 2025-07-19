@@ -1,219 +1,214 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { useAuth } from "@/contexts/auth-context"
 import {
-  LayoutDashboard,
-  Search,
-  AlertTriangle,
-  Settings,
-  Users,
+  BarChart3,
   Building2,
   CreditCard,
   Globe,
+  Home,
+  Search,
+  Settings,
   Shield,
-  Eye,
-  Database,
-  MessageSquare,
-  ChevronLeft,
+  Users,
+  AlertTriangle,
+  ChevronDown,
   ChevronRight,
+  Eye,
 } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-
-interface NavItem {
-  title: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  roles?: string[]
-}
-
-const navigation: NavItem[] = [
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Pesquisar",
-    href: "/search",
-    icon: Search,
-  },
-  {
-    title: "Vazamentos",
-    href: "/leaks",
-    icon: AlertTriangle,
-  },
-  {
-    title: "Configurações",
-    href: "/settings",
-    icon: Settings,
-  },
-]
-
-const adminNavigation: NavItem[] = [
-  {
-    title: "Dashboard Admin",
-    href: "/admin/dashboard",
-    icon: Shield,
-    roles: ["admin"],
-  },
-  {
-    title: "Sites",
-    href: "/admin/sites",
-    icon: Globe,
-    roles: ["admin"],
-  },
-  {
-    title: "Monitoramento",
-    href: "/admin/monitoring",
-    icon: Eye,
-    roles: ["admin", "platform_admin"],
-  },
-  {
-    title: "Configurações Admin",
-    href: "/admin/settings",
-    icon: Settings,
-    roles: ["admin"],
-  },
-]
-
-const platformNavigation: NavItem[] = [
-  {
-    title: "Dashboard Plataforma",
-    href: "/platform/dashboard",
-    icon: Database,
-    roles: ["platform_admin"],
-  },
-  {
-    title: "Usuários",
-    href: "/platform/users",
-    icon: Users,
-    roles: ["platform_admin"],
-  },
-  {
-    title: "Empresas",
-    href: "/platform/companies",
-    icon: Building2,
-    roles: ["platform_admin"],
-  },
-  {
-    title: "Sites",
-    href: "/platform/sites",
-    icon: Globe,
-    roles: ["platform_admin"],
-  },
-  {
-    title: "Contas Telegram",
-    href: "/platform/telegram-accounts",
-    icon: MessageSquare,
-    roles: ["platform_admin"],
-  },
-  {
-    title: "Planos",
-    href: "/platform/plans",
-    icon: CreditCard,
-    roles: ["platform_admin"],
-  },
-  {
-    title: "Faturamento",
-    href: "/platform/billing",
-    icon: CreditCard,
-    roles: ["platform_admin"],
-  },
-  {
-    title: "Configurações",
-    href: "/platform/settings",
-    icon: Settings,
-    roles: ["platform_admin"],
-  },
-]
+import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface SidebarNavProps {
-  onCollapseChange?: (collapsed: boolean) => void
+  onItemClick?: () => void
 }
 
-export function SidebarNav({ onCollapseChange }: SidebarNavProps) {
-  const [collapsed, setCollapsed] = useState(false)
+export function SidebarNav({ onItemClick }: SidebarNavProps) {
   const pathname = usePathname()
   const { user } = useAuth()
+  const [adminOpen, setAdminOpen] = useState(pathname.startsWith("/admin"))
+  const [platformOpen, setPlatformOpen] = useState(pathname.startsWith("/platform"))
 
-  const handleToggleCollapse = () => {
-    const newCollapsed = !collapsed
-    setCollapsed(newCollapsed)
-    onCollapseChange?.(newCollapsed)
-  }
+  const isAdmin = user?.role === "admin"
+  const isPlatformAdmin = user?.role === "platform_admin"
+  const isAdminOrPlatform = isAdmin || isPlatformAdmin
 
-  const getFilteredNavigation = () => {
-    const baseNav = [...navigation]
+  const navigation = [
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: Home,
+      show: true,
+    },
+    {
+      name: "Pesquisar Vazamentos",
+      href: "/search",
+      icon: Search,
+      show: true,
+    },
+    {
+      name: "Vazamentos",
+      href: "/leaks",
+      icon: AlertTriangle,
+      show: true,
+    },
+    {
+      name: "Configurações",
+      href: "/settings",
+      icon: Settings,
+      show: true,
+    },
+  ]
 
-    if (user?.role === "admin") {
-      baseNav.push(...adminNavigation.filter((item) => !item.roles || item.roles.includes("admin")))
-    }
+  const adminNavigation = [
+    {
+      name: "Dashboard Admin",
+      href: "/admin/dashboard",
+      icon: BarChart3,
+    },
+    {
+      name: "Sites",
+      href: "/admin/sites",
+      icon: Globe,
+    },
+    {
+      name: "Monitoramento",
+      href: "/admin/monitoring",
+      icon: Eye,
+    },
+    {
+      name: "Configurações",
+      href: "/admin/settings",
+      icon: Settings,
+    },
+  ]
 
-    if (user?.role === "platform_admin") {
-      baseNav.push(...adminNavigation.filter((item) => !item.roles || item.roles.includes("platform_admin")))
-      baseNav.push(...platformNavigation)
-    }
+  const platformNavigation = [
+    {
+      name: "Dashboard",
+      href: "/platform/dashboard",
+      icon: BarChart3,
+    },
+    {
+      name: "Usuários",
+      href: "/platform/users",
+      icon: Users,
+    },
+    {
+      name: "Empresas",
+      href: "/platform/companies",
+      icon: Building2,
+    },
+    {
+      name: "Sites",
+      href: "/platform/sites",
+      icon: Globe,
+    },
+    {
+      name: "Contas Telegram",
+      href: "/platform/telegram-accounts",
+      icon: Shield,
+    },
+    {
+      name: "Planos",
+      href: "/platform/plans",
+      icon: CreditCard,
+    },
+    {
+      name: "Faturamento",
+      href: "/platform/billing",
+      icon: CreditCard,
+    },
+    {
+      name: "Configurações",
+      href: "/platform/settings",
+      icon: Settings,
+    },
+  ]
 
-    return baseNav
-  }
-
-  const NavItems = ({ items }: { items: NavItem[] }) => (
-    <nav className="space-y-2">
-      {items.map((item) => {
-        const isActive = pathname === item.href
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              isActive ? "bg-blue-100 text-blue-900" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-              collapsed && "justify-center",
-            )}
-            title={collapsed ? item.title : undefined}
-          >
-            <item.icon className="h-4 w-4 flex-shrink-0" />
-            {!collapsed && <span>{item.title}</span>}
-          </Link>
-        )
-      })}
-    </nav>
-  )
-
-  const filteredNavigation = getFilteredNavigation()
-
-  return (
-    <div
+  const NavItem = ({ item, onClick }: { item: any; onClick?: () => void }) => (
+    <Link
+      href={item.href}
+      onClick={onClick}
       className={cn(
-        "hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 transition-all duration-300",
-        collapsed ? "lg:w-16" : "lg:w-64",
+        "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+        pathname === item.href
+          ? "bg-blue-100 text-blue-700 border-r-2 border-blue-700"
+          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
       )}
     >
-      <div className="flex flex-col flex-grow bg-white border-r border-slate-200">
-        <div className="flex items-center flex-shrink-0 px-4 py-6">
-          <Link href="/dashboard" className="flex items-center">
-            <Shield className="h-8 w-8 text-blue-600 flex-shrink-0" />
-            {!collapsed && <span className="ml-2 text-xl font-bold text-blue-900">BreachHawk</span>}
-          </Link>
-        </div>
+      <item.icon
+        className={cn(
+          "mr-3 h-5 w-5 flex-shrink-0",
+          pathname === item.href ? "text-blue-700" : "text-slate-400 group-hover:text-slate-500",
+        )}
+      />
+      {item.name}
+    </Link>
+  )
 
-        <ScrollArea className="flex-1 px-4">
-          <NavItems items={filteredNavigation} />
-        </ScrollArea>
+  return (
+    <nav className="flex-1 px-3 py-4 space-y-1">
+      {/* Main Navigation */}
+      {navigation
+        .filter((item) => item.show)
+        .map((item) => (
+          <NavItem key={item.name} item={item} onClick={onItemClick} />
+        ))}
 
-        <div className="p-4 border-t border-slate-200">
-          <Button variant="ghost" size="sm" onClick={handleToggleCollapse} className="w-full justify-center">
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
+      {/* Admin Section */}
+      {isAdmin && (
+        <div className="pt-4">
+          <Collapsible open={adminOpen} onOpenChange={setAdminOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-between px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              >
+                <div className="flex items-center">
+                  <Shield className="mr-3 h-5 w-5 text-slate-400" />
+                  Administração
+                </div>
+                {adminOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pl-6">
+              {adminNavigation.map((item) => (
+                <NavItem key={item.name} item={item} onClick={onItemClick} />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* Platform Admin Section */}
+      {isPlatformAdmin && (
+        <div className="pt-4">
+          <Collapsible open={platformOpen} onOpenChange={setPlatformOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-between px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              >
+                <div className="flex items-center">
+                  <Building2 className="mr-3 h-5 w-5 text-slate-400" />
+                  Plataforma
+                </div>
+                {platformOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pl-6">
+              {platformNavigation.map((item) => (
+                <NavItem key={item.name} item={item} onClick={onItemClick} />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      )}
+    </nav>
   )
 }

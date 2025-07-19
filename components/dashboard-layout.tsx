@@ -1,111 +1,103 @@
 "use client"
 
 import type React from "react"
+
+import { useState } from "react"
+import { usePathname } from "next/navigation"
+import { Menu } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { SidebarNav } from "@/components/sidebar-nav"
 import { UserHeader } from "@/components/user-header"
-import { useAuth } from "@/contexts/auth-context"
-import { useRouter, usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { UserFooter } from "@/components/user-footer"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, isAuthenticated, loading } = useAuth()
-  const router = useRouter()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push("/login")
-    }
-  }, [isAuthenticated, loading, router])
 
   const getBreadcrumbs = () => {
-    const pathSegments = pathname.split("/").filter(Boolean)
-    const breadcrumbs: Array<{ label: string; href?: string }> = []
+    const segments = pathname.split("/").filter(Boolean)
+    const breadcrumbs = []
 
-    if (pathSegments.length === 0) return []
-
-    // Mapear rotas para breadcrumbs
-    if (pathSegments[0] === "dashboard") {
-      breadcrumbs.push({ label: "Dashboard" })
-    } else if (pathSegments[0] === "admin") {
+    if (segments.includes("admin")) {
       breadcrumbs.push({ label: "Admin", href: "/admin/dashboard" })
-      if (pathSegments[1] && pathSegments[1] !== "dashboard") {
-        const pageLabels: Record<string, string> = {
-          sites: "Sites",
-          users: "Usuários",
-          settings: "Configurações",
-          monitoring: "Monitoramento",
-        }
-        breadcrumbs.push({
-          label: pageLabels[pathSegments[1]] || pathSegments[1].charAt(0).toUpperCase() + pathSegments[1].slice(1),
-        })
+      if (segments.includes("monitoring")) {
+        breadcrumbs.push({ label: "Monitoramento", href: "/admin/monitoring" })
       }
-    } else if (pathSegments[0] === "platform") {
+    } else if (segments.includes("platform")) {
       breadcrumbs.push({ label: "Plataforma", href: "/platform/dashboard" })
-      if (pathSegments[1] && pathSegments[1] !== "dashboard") {
-        const pageLabels: Record<string, string> = {
-          companies: "Empresas",
-          users: "Usuários",
-          sites: "Sites",
-          billing: "Faturamento",
-          settings: "Configurações",
-        }
-        breadcrumbs.push({
-          label: pageLabels[pathSegments[1]] || pathSegments[1].charAt(0).toUpperCase() + pathSegments[1].slice(1),
-        })
-      }
-    } else if (pathSegments[0] === "settings") {
-      breadcrumbs.push({ label: "Configurações" })
-    } else if (pathSegments[0] === "search") {
-      breadcrumbs.push({ label: "Pesquisar" })
-    } else if (pathSegments[0] === "leaks") {
-      breadcrumbs.push({ label: "Vazamentos" })
     } else {
-      const pageLabels: Record<string, string> = {
-        search: "Pesquisar",
-        leaks: "Vazamentos",
-        settings: "Configurações",
-      }
-      breadcrumbs.push({
-        label: pageLabels[pathSegments[0]] || pathSegments[0].charAt(0).toUpperCase() + pathSegments[0].slice(1),
-      })
+      breadcrumbs.push({ label: "Dashboard", href: "/dashboard" })
     }
 
     return breadcrumbs
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="flex items-center space-x-3">
-          <LoadingSpinner size="lg" />
-          <p className="text-slate-700 font-medium">Carregando sua experiência...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated || !user) {
-    return null
-  }
-
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <SidebarNav onCollapseChange={setSidebarCollapsed} />
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <UserHeader />
 
-      {/* Main Content Area - Ajusta dinamicamente baseado no estado da sidebar */}
-      <div className={`flex flex-1 flex-col transition-all duration-300 ${sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"}`}>
-        <UserHeader breadcrumbs={getBreadcrumbs()} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-slate-50">{children}</main>
-        <footer className="border-t border-slate-200 bg-white py-4 px-6 text-center text-sm text-slate-500">
-          © {new Date().getFullYear()} BreachHawk. Todos os direitos reservados.
-        </footer>
+      <div className="flex flex-1">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:pt-16">
+          <div className="flex-1 flex flex-col min-h-0 bg-white border-r border-slate-200">
+            <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+              <SidebarNav />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Sidebar */}
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="lg:hidden fixed top-4 left-4 z-40 bg-white shadow-md">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0">
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h2 className="text-lg font-semibold text-blue-900">Menu</h2>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <SidebarNav onItemClick={() => setSidebarOpen(false)} />
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        {/* Main Content */}
+        <div className="lg:pl-64 flex flex-col flex-1">
+          <main className="flex-1">
+            {/* Breadcrumbs */}
+            <div className="bg-white border-b border-slate-200 px-4 py-3">
+              <nav className="flex" aria-label="Breadcrumb">
+                <ol className="flex items-center space-x-2">
+                  {getBreadcrumbs().map((breadcrumb, index) => (
+                    <li key={breadcrumb.href} className="flex items-center">
+                      {index > 0 && <span className="text-slate-400 mx-2">/</span>}
+                      <a
+                        href={breadcrumb.href}
+                        className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
+                      >
+                        {breadcrumb.label}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            </div>
+
+            {/* Page Content */}
+            <div className="flex-1">{children}</div>
+          </main>
+
+          <UserFooter />
+        </div>
       </div>
     </div>
   )
