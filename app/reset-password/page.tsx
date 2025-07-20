@@ -37,15 +37,32 @@ function ResetPasswordForm() {
   const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
   useEffect(() => {
-    const tokenParam = searchParams.get("token")
-    if (tokenParam && tokenParam.trim().length > 0) {
-      setToken(tokenParam.trim())
-      setTokenValid(true) // Aceita qualquer token inicialmente
+    // 1. Tenta recuperar de sessionStorage
+    const saved = sessionStorage.getItem("resetToken")
+    
+    if (saved) {
+      // Se já tinha sido salvo antes, usamos ele direto
+      setToken(saved)
+      setTokenValid(true)
+      // limpamos a URL só por segurança
+      const newUrl = window.location.pathname
+      window.history.replaceState({}, document.title, newUrl)
+      return
+    }
 
-      // Remove token da URL por segurança após capturar
+    // 2. Se não havia salvo, tentamos ler da URL
+    const tokenParam = searchParams.get("token")
+    if (tokenParam && tokenParam.trim()) {
+      const t = tokenParam.trim()
+      // 3. Salvamos para persistir e atualizamos estado
+      sessionStorage.setItem("resetToken", t)
+      setToken(t)
+      setTokenValid(true)
+      // removemos ?token=... da URL
       const newUrl = window.location.pathname
       window.history.replaceState({}, document.title, newUrl)
     } else {
+      // 4. Nem em storage nem na URL: link inválido
       setTokenValid(false)
       setErrors({
         token:
@@ -55,6 +72,7 @@ function ResetPasswordForm() {
       })
     }
   }, [searchParams, language])
+
 
   // Carregar política de senhas pública
   useEffect(() => {
