@@ -169,7 +169,7 @@ export default function UserSettings() {
     e.preventDefault()
     setSaving(true)
     try {
-      const response = await fetch(`${apiUrl}/api/v1/users/me`, {
+      const response = await fetch(`${apiUrl}/api/accounts/me/`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -213,7 +213,7 @@ export default function UserSettings() {
     e.preventDefault()
     setSaving(true)
     try {
-      const response = await fetch(`${apiUrl}/api/v1/users/me`, {
+      const response = await fetch(`${apiUrl}/api/accounts/me/`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
