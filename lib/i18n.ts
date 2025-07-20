@@ -1,9 +1,3 @@
-// lib/i18n.ts
-// -----------------------------------------------------------------------------
-// Mantém compatibilidade com todos os módulos que importam `translations`.
-// Inclui o objeto completo (pt | en) e tipagens auxiliares.
-// -----------------------------------------------------------------------------
-
 export type Language = "pt" | "en"
 
 export const translations = {
@@ -17,7 +11,6 @@ export const translations = {
       login: "Entrar",
       getStarted: "Começar",
     },
-
     // Sidebar
     sidebar: {
       dashboard: "Dashboard",
@@ -35,8 +28,8 @@ export const translations = {
       logout: "Sair",
       profile: "Perfil",
       notifications: "Notificações",
+      resources: "Recursos Monitorados",
     },
-
     // Hero
     hero: {
       title: "Monitore a",
@@ -52,7 +45,6 @@ export const translations = {
         users: "Usuários Ativos",
       },
     },
-
     // Features
     features: {
       tag: "Recursos",
@@ -89,7 +81,6 @@ export const translations = {
         ],
       },
     },
-
     // Pricing
     pricing: {
       tag: "Preços",
@@ -126,7 +117,6 @@ export const translations = {
         cta: "Falar com Vendas",
       },
     },
-
     // Footer
     footer: {
       company: {
@@ -144,7 +134,7 @@ export const translations = {
       legal: {
         title: "Legal",
         terms: "Termos de Uso",
-        privacy: "Política de Privacidade",
+        privacy: "Privacidade",
         security: "Segurança",
       },
       social: {
@@ -152,7 +142,6 @@ export const translations = {
       },
       copyright: "Todos os direitos reservados.",
     },
-
     // Auth
     auth: {
       login: {
@@ -216,20 +205,13 @@ export const translations = {
       },
       forgotPassword: {
         title: "Recuperar Senha",
-        subtitle: "Digite seu nome de usuário ou email para receber um link de recuperação",
-        identifier: "Nome de usuário ou Email",
-        identifierPlaceholder: "Digite seu nome de usuário ou email",
+        subtitle: "Digite seu e-mail para receber instruções",
         email: "E-mail",
         emailPlaceholder: "Digite seu e-mail",
-        send: "Enviar Link de Recuperação",
+        send: "Enviar Instruções",
         sending: "Enviando...",
-        success: "Link de recuperação enviado com sucesso!",
-        checkEmail: "Verifique seu email para o link de recuperação de senha.",
+        success: "Instruções enviadas! Verifique seu e-mail.",
         back: "Voltar ao Login",
-        errors: {
-          identifierRequired: "Nome de usuário ou email é obrigatório",
-          generic: "Erro ao enviar link de recuperação. Tente novamente.",
-        },
       },
       resetPassword: {
         title: "Redefinir Senha",
@@ -248,7 +230,6 @@ export const translations = {
         },
       },
     },
-
     // Settings
     settings: {
       title: "Configurações",
@@ -306,7 +287,6 @@ export const translations = {
         loginHistoryDesc: "Visualize seus últimos acessos",
       },
     },
-
     // Admin
     admin: {
       settings: {
@@ -375,7 +355,6 @@ export const translations = {
       },
     },
   },
-
   en: {
     // Navigation
     nav: {
@@ -386,7 +365,6 @@ export const translations = {
       login: "Sign In",
       getStarted: "Get Started",
     },
-
     // Sidebar
     sidebar: {
       dashboard: "Dashboard",
@@ -404,8 +382,8 @@ export const translations = {
       logout: "Logout",
       profile: "Profile",
       notifications: "Notifications",
+      resources: "Monitored Resources",
     },
-
     // Hero
     hero: {
       title: "Monitor the",
@@ -420,7 +398,6 @@ export const translations = {
         users: "Active Users",
       },
     },
-
     // Features
     features: {
       tag: "Features",
@@ -452,7 +429,6 @@ export const translations = {
         ],
       },
     },
-
     // Pricing
     pricing: {
       tag: "Pricing",
@@ -483,7 +459,6 @@ export const translations = {
         cta: "Contact Sales",
       },
     },
-
     // Footer
     footer: {
       company: {
@@ -509,7 +484,6 @@ export const translations = {
       },
       copyright: "All rights reserved.",
     },
-
     // Auth
     auth: {
       login: {
@@ -573,20 +547,13 @@ export const translations = {
       },
       forgotPassword: {
         title: "Recover Password",
-        subtitle: "Enter your username or email to receive a recovery link",
-        identifier: "Username or Email",
-        identifierPlaceholder: "Enter your username or email",
+        subtitle: "Enter your email to receive instructions",
         email: "Email",
         emailPlaceholder: "Enter your email",
-        send: "Send Recovery Link",
+        send: "Send Instructions",
         sending: "Sending...",
-        success: "Recovery link sent successfully!",
-        checkEmail: "Check your email for the password recovery link.",
+        success: "Instructions sent! Check your email.",
         back: "Back to Login",
-        errors: {
-          identifierRequired: "Username or email is required",
-          generic: "Error sending recovery link. Please try again.",
-        },
       },
       resetPassword: {
         title: "Reset Password",
@@ -605,7 +572,6 @@ export const translations = {
         },
       },
     },
-
     // Settings
     settings: {
       title: "Settings",
@@ -663,7 +629,6 @@ export const translations = {
         loginHistoryDesc: "View your recent access history",
       },
     },
-
     // Admin
     admin: {
       settings: {
@@ -734,7 +699,23 @@ export const translations = {
   },
 }
 
-// -----------------------------------------------------------------------------
-// Caso queira carregar traduções de forma assíncrona no futuro, você pode
-// acrescentar aqui um loader que utiliza dynamic import ou fetch de JSONs.
-// -----------------------------------------------------------------------------
+// Helper function to get translations
+export function getTranslations(language: Language = "pt") {
+  return translations[language]
+}
+
+// Helper function to get nested translation
+export function t(key: string, language: Language = "pt"): string {
+  const keys = key.split(".")
+  let value: any = translations[language]
+
+  for (const k of keys) {
+    if (value && typeof value === "object" && k in value) {
+      value = value[k]
+    } else {
+      return key // Return key if translation not found
+    }
+  }
+
+  return typeof value === "string" ? value : key
+}

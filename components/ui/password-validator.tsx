@@ -101,3 +101,6 @@ export default function PasswordValidator({ password, policy }: PasswordValidato
     </div>
   )
 }
+
+// exportação nomeada para evitar erro de build
+export { PasswordValidator }

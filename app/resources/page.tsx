@@ -1,17 +1,16 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -27,129 +26,82 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { useMonitoring, useCreateResource, useUpdateResource, useDeleteResource } from "@/hooks/use-monitoring"
-import { Target, Plus, Search, Edit, Trash2, Calendar, Activity } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import type { MonitoredResource } from "@/types/monitoring"
+import { useMonitoring } from "@/hooks/use-monitoring"
+import { useLanguage } from "@/contexts/language-context"
+import { getTranslations } from "@/lib/i18n"
+import { Target, Plus, Search, Edit, Trash2, Calendar, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 export default function ResourcesPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingResource, setEditingResource] = useState<MonitoredResource | null>(null)
+  const { language } = useLanguage()
+  const t = getTranslations(language)
+  const [search, setSearch] = useState("")
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editingResource, setEditingResource] = useState<any>(null)
   const [formData, setFormData] = useState({
     keyword: "",
     description: "",
     is_active: true,
   })
 
-  const { data: resources, isLoading } = useMonitoring()
-  const createMutation = useCreateResource()
-  const updateMutation = useUpdateResource()
-  const deleteMutation = useDeleteResource()
-  const { toast } = useToast()
+  const { data: resources, isLoading, error, createMutation, updateMutation, deleteMutation } = useMonitoring()
 
-  // Filtrar recursos baseado na busca
-  const filteredResources =
-    resources?.filter(
-      (resource) =>
-        resource.keyword.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        resource.description?.toLowerCase().includes(searchTerm.toLowerCase()),
-    ) || []
+  const filteredResources = resources?.filter(
+    (resource) =>
+      resource.keyword.toLowerCase().includes(search.toLowerCase()) ||
+      resource.description?.toLowerCase().includes(search.toLowerCase()),
+  )
 
-  // Estatísticas
-  const totalResources = resources?.length || 0
-  const activeResources = resources?.filter((r) => r.is_active).length || 0
-  const inactiveResources = totalResources - activeResources
-
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!formData.keyword.trim()) {
-      toast({
-        title: "Erro",
-        description: "Palavra-chave é obrigatória",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      await createMutation.mutateAsync(formData)
-      setIsCreateDialogOpen(false)
-      setFormData({ keyword: "", description: "", is_active: true })
-      toast({
-        title: "Sucesso",
-        description: "Recurso criado com sucesso",
-      })
-    } catch (error) {
-      // Erro já tratado no hook
-    }
+  const stats = {
+    total: resources?.length || 0,
+    active: resources?.filter((r) => r.is_active).length || 0,
+    inactive: resources?.filter((r) => !r.is_active).length || 0,
   }
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!editingResource || !formData.keyword.trim()) {
-      toast({
-        title: "Erro",
-        description: "Palavra-chave é obrigatória",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      await updateMutation.mutateAsync({
-        id: editingResource.id,
-        data: formData,
-      })
-      setIsEditDialogOpen(false)
-      setEditingResource(null)
-      setFormData({ keyword: "", description: "", is_active: true })
-      toast({
-        title: "Sucesso",
-        description: "Recurso atualizado com sucesso",
-      })
-    } catch (error) {
-      // Erro já tratado no hook
-    }
+  const handleCreate = () => {
+    createMutation.mutate(formData, {
+      onSuccess: () => {
+        setIsCreateOpen(false)
+        setFormData({ keyword: "", description: "", is_active: true })
+      },
+    })
   }
 
-  const handleEdit = (resource: MonitoredResource) => {
+  const handleEdit = (resource: any) => {
     setEditingResource(resource)
     setFormData({
       keyword: resource.keyword,
       description: resource.description || "",
       is_active: resource.is_active,
     })
-    setIsEditDialogOpen(true)
+    setIsEditOpen(true)
   }
 
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteMutation.mutateAsync(id)
-      toast({
-        title: "Sucesso",
-        description: "Recurso excluído com sucesso",
-      })
-    } catch (error) {
-      // Erro já tratado no hook
-    }
+  const handleUpdate = () => {
+    if (!editingResource) return
+
+    updateMutation.mutate(
+      {
+        id: editingResource.id,
+        data: formData,
+      },
+      {
+        onSuccess: () => {
+          setIsEditOpen(false)
+          setEditingResource(null)
+          setFormData({ keyword: "", description: "", is_active: true })
+        },
+      },
+    )
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
+  const handleDelete = (id: number) => {
+    deleteMutation.mutate(id)
   }
 
   return (
@@ -158,271 +110,279 @@ export default function ResourcesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Recursos Monitorados</h1>
-            <p className="text-muted-foreground">Gerencie palavras-chave e recursos para monitoramento de vazamentos</p>
+            <h1 className="text-3xl font-bold text-slate-900">{t.sidebar.resources}</h1>
+            <p className="text-slate-600 mt-1">Gerencie os recursos que devem ser monitorados na dark web</p>
           </div>
-
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Novo Recurso
+                Adicionar Recurso
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Criar Novo Recurso</DialogTitle>
-                <DialogDescription>Adicione uma nova palavra-chave ou recurso para monitoramento</DialogDescription>
+                <DialogTitle>Adicionar Novo Recurso</DialogTitle>
+                <DialogDescription>Adicione uma palavra-chave ou termo para monitoramento</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleCreateSubmit}>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="keyword">Palavra-chave *</Label>
-                    <Input
-                      id="keyword"
-                      value={formData.keyword}
-                      onChange={(e) => setFormData({ ...formData, keyword: e.target.value })}
-                      placeholder="Ex: empresa.com, API key, database"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Descrição</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Descrição opcional do recurso..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="is_active"
-                      checked={formData.is_active}
-                      onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                    />
-                    <Label htmlFor="is_active">Ativo</Label>
-                  </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="keyword">Palavra-chave *</Label>
+                  <Input
+                    id="keyword"
+                    placeholder="Ex: empresa.com, admin@empresa.com"
+                    value={formData.keyword}
+                    onChange={(e) => setFormData({ ...formData, keyword: e.target.value })}
+                  />
                 </div>
-
-                <DialogFooter className="mt-6">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Descrição</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Descreva o que este recurso representa..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
+                  <Button onClick={handleCreate} disabled={!formData.keyword.trim() || createMutation.isPending}>
                     {createMutation.isPending ? "Criando..." : "Criar Recurso"}
                   </Button>
-                </DialogFooter>
-              </form>
+                </div>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
 
-        {/* Estatísticas */}
-        <div className="grid gap-4 md:grid-cols-3">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Recursos</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalResources}</div>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Total de Recursos</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+                </div>
+                <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Target className="h-4 w-4 text-blue-600" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recursos Ativos</CardTitle>
-              <Activity className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{activeResources}</div>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Ativos</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                </div>
+                <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recursos Inativos</CardTitle>
-              <Activity className="h-4 w-4 text-gray-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-600">{inactiveResources}</div>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Inativos</p>
+                  <p className="text-2xl font-bold text-slate-600">{stats.inactive}</p>
+                </div>
+                <div className="h-8 w-8 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <XCircle className="h-4 w-4 text-slate-600" />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Busca */}
-        <div className="flex items-center space-x-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por palavra-chave ou descrição..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
-
-        {/* Lista de Recursos */}
-        <div className="space-y-4">
-          {isLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader>
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="h-3 bg-gray-200 rounded"></div>
-                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+        {/* Search */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+              <Input
+                placeholder="Buscar recursos por palavra-chave ou descrição..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
             </div>
-          ) : filteredResources.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Target className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  {searchTerm ? "Nenhum recurso encontrado" : "Nenhum recurso cadastrado"}
-                </h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  {searchTerm
-                    ? "Tente ajustar os termos de busca"
-                    : "Comece criando seu primeiro recurso para monitoramento"}
-                </p>
-                {!searchTerm && (
-                  <Button onClick={() => setIsCreateDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Primeiro Recurso
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredResources.map((resource) => (
-                <Card key={resource.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{resource.keyword}</CardTitle>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant={resource.is_active ? "default" : "secondary"}>
-                            {resource.is_active ? "Ativo" : "Inativo"}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(resource)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir o recurso "{resource.keyword}"? Esta ação não pode ser
-                                desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDelete(resource.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+          </CardContent>
+        </Card>
+
+        {/* Resources List */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>Erro ao carregar recursos. Tente novamente.</AlertDescription>
+          </Alert>
+        )}
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-6 w-16" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-8 w-16" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredResources && filteredResources.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredResources.map((resource) => (
+              <Card key={resource.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg">{resource.keyword}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={resource.is_active ? "default" : "secondary"}
+                          className={resource.is_active ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"}
+                        >
+                          {resource.is_active ? "Ativo" : "Inativo"}
+                        </Badge>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    {resource.description && (
-                      <p className="text-sm text-muted-foreground mb-3">{resource.description}</p>
-                    )}
-                    <div className="space-y-1 text-xs text-muted-foreground">
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {resource.description && (
+                    <p className="text-slate-600 text-sm mb-4 line-clamp-2">{resource.description}</p>
+                  )}
+
+                  <div className="space-y-2 text-xs text-slate-500">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Criado em {format(new Date(resource.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                    </div>
+                    {resource.updated_at !== resource.created_at && (
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        Criado: {formatDate(resource.created_at)}
+                        Atualizado em {format(new Date(resource.updated_at), "dd/MM/yyyy", { locale: ptBR })}
                       </div>
-                      {resource.updated_at !== resource.created_at && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          Atualizado: {formatDate(resource.updated_at)}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+                    )}
+                  </div>
 
-        {/* Dialog de Edição */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                  <div className="flex gap-2 mt-4">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(resource)} className="flex-1">
+                      <Edit className="h-3 w-3 mr-1" />
+                      Editar
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 bg-transparent">
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir Recurso</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir o recurso "{resource.keyword}"? Esta ação não pode ser
+                            desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(resource.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Target className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum recurso encontrado</h3>
+              <p className="text-slate-600 mb-4">
+                {search
+                  ? "Não há recursos que correspondam à sua busca."
+                  : "Você ainda não adicionou nenhum recurso para monitoramento."}
+              </p>
+              {!search && (
+                <Button onClick={() => setIsCreateOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Primeiro Recurso
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Edit Dialog */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Editar Recurso</DialogTitle>
               <DialogDescription>Atualize as informações do recurso monitorado</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleEditSubmit}>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-keyword">Palavra-chave *</Label>
-                  <Input
-                    id="edit-keyword"
-                    value={formData.keyword}
-                    onChange={(e) => setFormData({ ...formData, keyword: e.target.value })}
-                    placeholder="Ex: empresa.com, API key, database"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-description">Descrição</Label>
-                  <Textarea
-                    id="edit-description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Descrição opcional do recurso..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="edit-is_active"
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  />
-                  <Label htmlFor="edit-is_active">Ativo</Label>
-                </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-keyword">Palavra-chave *</Label>
+                <Input
+                  id="edit-keyword"
+                  placeholder="Ex: empresa.com, admin@empresa.com"
+                  value={formData.keyword}
+                  onChange={(e) => setFormData({ ...formData, keyword: e.target.value })}
+                />
               </div>
-
-              <DialogFooter className="mt-6">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Descrição</Label>
+                <Textarea
+                  id="edit-description"
+                  placeholder="Descreva o que este recurso representa..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-active"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  className="rounded border-slate-300"
+                />
+                <Label htmlFor="edit-active">Recurso ativo</Label>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsEditOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={updateMutation.isPending}>
+                <Button onClick={handleUpdate} disabled={!formData.keyword.trim() || updateMutation.isPending}>
                   {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
                 </Button>
-              </DialogFooter>
-            </form>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { alertService, type AlertsResponse } from "@/services/alert-service"
+import { AlertService, type AlertsResponse, type AlertStats } from "@/services/alert-service"
 import { useToast } from "@/hooks/use-toast"
 
 export function useAlerts(params?: {
@@ -12,14 +12,16 @@ export function useAlerts(params?: {
 }) {
   return useQuery<AlertsResponse>({
     queryKey: ["alerts", params],
-    queryFn: () => alertService.getAlerts(params),
+    queryFn: () => AlertService.getAlerts(params),
+    staleTime: 30000, // 30 seconds
   })
 }
 
 export function useAlertStats() {
-  return useQuery({
+  return useQuery<AlertStats>({
     queryKey: ["alert-stats"],
-    queryFn: alertService.getAlertStats,
+    queryFn: () => AlertService.getAlertStats(),
+    staleTime: 60000, // 1 minute
   })
 }
 
@@ -29,22 +31,23 @@ export function useAcknowledgeAlert() {
 
   return useMutation({
     mutationFn: ({ alertId, acknowledged }: { alertId: number; acknowledged: boolean }) =>
-      alertService.acknowledgeAlert(alertId, acknowledged),
-    onSuccess: (_, { acknowledged }) => {
+      AlertService.acknowledgeAlert(alertId, acknowledged),
+    onSuccess: (data, variables) => {
+      // Invalidate and refetch alerts
       queryClient.invalidateQueries({ queryKey: ["alerts"] })
       queryClient.invalidateQueries({ queryKey: ["alert-stats"] })
 
       toast({
-        title: acknowledged ? "Alerta reconhecido" : "Reconhecimento removido",
-        description: acknowledged
+        title: variables.acknowledged ? "Alerta reconhecido" : "Reconhecimento removido",
+        description: variables.acknowledged
           ? "O alerta foi marcado como reconhecido."
           : "O reconhecimento do alerta foi removido.",
       })
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Erro",
-        description: error.response?.data?.detail || "Erro ao atualizar alerta",
+        description: "Não foi possível atualizar o status do alerta.",
         variant: "destructive",
       })
     },
