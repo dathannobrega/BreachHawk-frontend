@@ -1,64 +1,13 @@
-import axios, { type AxiosInstance, type AxiosResponse } from "axios"
 import type { SiteRead, SiteCreate, SiteUpdate, TelegramAccountRead, TelegramAccountCreate } from "@/types/site"
 
-// Configuração base da API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
-
-// Criar instância do axios
-const apiInstance: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000,
-  headers: {
-    "Content-Type": "application/json",
-  },
-})
-
-// Interceptor para adicionar token de autenticação
-apiInstance.interceptors.request.use(
-  (config) => {
-    // Tentar obter token do localStorage (client-side)
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("auth_token") || sessionStorage.getItem("auth_token")
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-      }
-    }
-
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  },
-)
-
-// Interceptor para tratar respostas e erros
-apiInstance.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response
-  },
-  (error) => {
-    // Tratar erros de autenticação
-    if (error.response?.status === 401) {
-      // Token expirado ou inválido
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("auth_token")
-        sessionStorage.removeItem("auth_token")
-        // Redirecionar para login se necessário
-        window.location.href = "/login"
-      }
-    }
-
-    return Promise.reject(error)
-  },
-)
 
 export const api = {
   baseURL: API_BASE_URL,
-  instance: apiInstance,
 
   // Helper para headers de autenticação
   getAuthHeaders: () => {
-    const token = localStorage.getItem("auth_token") || sessionStorage.getItem("auth_token")
+    const token = localStorage.getItem("access_token")
     return {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -67,7 +16,7 @@ export const api = {
 
   // Helper para headers de upload
   getUploadHeaders: () => {
-    const token = localStorage.getItem("auth_token") || sessionStorage.getItem("auth_token")
+    const token = localStorage.getItem("access_token")
     return {
       Authorization: `Bearer ${token}`,
       // Não incluir Content-Type para FormData
@@ -78,17 +27,26 @@ export const api = {
 // Sites API
 export async function getSites(page = 1, limit = 10): Promise<{ results: SiteRead[]; count: number }> {
   try {
-    const response = await api.instance.get(`/api/sites/?page=${page}&limit=${limit}`)
+    const response = await fetch(`${api.baseURL}/api/sites/?page=${page}&limit=${limit}`, {
+      headers: api.getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao buscar sites")
+    }
+
+    const data = await response.json()
 
     // Se a API retorna um array simples, adaptar para o formato esperado
-    if (Array.isArray(response.data)) {
+    if (Array.isArray(data)) {
       return {
-        results: response.data,
-        count: response.data.length,
+        results: data,
+        count: data.length,
       }
     }
 
-    return response.data
+    return data
   } catch (error) {
     console.error("Error fetching sites:", error)
     throw error
@@ -97,9 +55,18 @@ export async function getSites(page = 1, limit = 10): Promise<{ results: SiteRea
 
 export async function createSite(siteData: SiteCreate): Promise<SiteRead> {
   try {
-    const response = await api.instance.post(`/api/sites/`, siteData)
+    const response = await fetch(`${api.baseURL}/api/sites/`, {
+      method: "POST",
+      headers: api.getAuthHeaders(),
+      body: JSON.stringify(siteData),
+    })
 
-    return response.data
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao criar site")
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error creating site:", error)
     throw error
@@ -108,9 +75,18 @@ export async function createSite(siteData: SiteCreate): Promise<SiteRead> {
 
 export async function updateSite({ id, data }: { id: number; data: SiteUpdate }): Promise<SiteRead> {
   try {
-    const response = await api.instance.put(`/api/sites/${id}/`, data)
+    const response = await fetch(`${api.baseURL}/api/sites/${id}/`, {
+      method: "PUT",
+      headers: api.getAuthHeaders(),
+      body: JSON.stringify(data),
+    })
 
-    return response.data
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao atualizar site")
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error updating site:", error)
     throw error
@@ -119,7 +95,15 @@ export async function updateSite({ id, data }: { id: number; data: SiteUpdate })
 
 export async function deleteSite(id: number): Promise<void> {
   try {
-    await api.instance.delete(`/api/sites/${id}/`)
+    const response = await fetch(`${api.baseURL}/api/sites/${id}/`, {
+      method: "DELETE",
+      headers: api.getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao excluir site")
+    }
   } catch (error) {
     console.error("Error deleting site:", error)
     throw error
@@ -129,9 +113,17 @@ export async function deleteSite(id: number): Promise<void> {
 // Scraper APIs
 export async function runScraper(siteId: number): Promise<{ task_id: string; status: string }> {
   try {
-    const response = await api.instance.post(`/api/scrapers/sites/${siteId}/run/`)
+    const response = await fetch(`${api.baseURL}/api/scrapers/sites/${siteId}/run/`, {
+      method: "POST",
+      headers: api.getAuthHeaders(),
+    })
 
-    return response.data
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao executar scraper")
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error running scraper:", error)
     throw error
@@ -140,9 +132,16 @@ export async function runScraper(siteId: number): Promise<{ task_id: string; sta
 
 export async function getTaskStatus(taskId: string): Promise<{ task_id: string; status: string; result?: any }> {
   try {
-    const response = await api.instance.get(`/api/scrapers/tasks/${taskId}/`)
+    const response = await fetch(`${api.baseURL}/api/scrapers/tasks/${taskId}/`, {
+      headers: api.getAuthHeaders(),
+    })
 
-    return response.data
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao consultar status da tarefa")
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error getting task status:", error)
     throw error
@@ -151,9 +150,16 @@ export async function getTaskStatus(taskId: string): Promise<{ task_id: string; 
 
 export async function getSiteLogs(siteId: number): Promise<any[]> {
   try {
-    const response = await api.instance.get(`/api/scrapers/sites/${siteId}/logs/`)
+    const response = await fetch(`${api.baseURL}/api/scrapers/sites/${siteId}/logs/`, {
+      headers: api.getAuthHeaders(),
+    })
 
-    return response.data
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao buscar logs")
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error fetching site logs:", error)
     throw error
@@ -162,9 +168,16 @@ export async function getSiteLogs(siteId: number): Promise<any[]> {
 
 export async function getSiteStats(siteId: number): Promise<any> {
   try {
-    const response = await api.instance.get(`/api/scrapers/sites/${siteId}/stats/`)
+    const response = await fetch(`${api.baseURL}/api/scrapers/sites/${siteId}/stats/`, {
+      headers: api.getAuthHeaders(),
+    })
 
-    return response.data
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao buscar estatísticas")
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error fetching site stats:", error)
     throw error
@@ -173,9 +186,16 @@ export async function getSiteStats(siteId: number): Promise<any> {
 
 export async function getAllLogs(): Promise<any[]> {
   try {
-    const response = await api.instance.get(`/api/scrapers/logs/`)
+    const response = await fetch(`${api.baseURL}/api/scrapers/logs/`, {
+      headers: api.getAuthHeaders(),
+    })
 
-    return response.data
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao buscar todos os logs")
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error fetching all logs:", error)
     throw error
@@ -185,9 +205,16 @@ export async function getAllLogs(): Promise<any[]> {
 // Telegram Accounts API
 export async function getTelegramAccounts(): Promise<TelegramAccountRead[]> {
   try {
-    const response = await api.instance.get(`/api/sites/telegram-accounts/`)
+    const response = await fetch(`${api.baseURL}/api/sites/telegram-accounts/`, {
+      headers: api.getAuthHeaders(),
+    })
 
-    return response.data
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao buscar contas do Telegram")
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error fetching telegram accounts:", error)
     throw error
@@ -196,9 +223,18 @@ export async function getTelegramAccounts(): Promise<TelegramAccountRead[]> {
 
 export async function createTelegramAccount(accountData: TelegramAccountCreate): Promise<TelegramAccountRead> {
   try {
-    const response = await api.instance.post(`/api/sites/telegram-accounts/`, accountData)
+    const response = await fetch(`${api.baseURL}/api/sites/telegram-accounts/`, {
+      method: "POST",
+      headers: api.getAuthHeaders(),
+      body: JSON.stringify(accountData),
+    })
 
-    return response.data
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao criar conta do Telegram")
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error creating telegram account:", error)
     throw error
@@ -210,9 +246,18 @@ export async function updateTelegramAccount({
   data,
 }: { id: number; data: TelegramAccountCreate }): Promise<TelegramAccountRead> {
   try {
-    const response = await api.instance.put(`/api/sites/telegram-accounts/${id}/`, data)
+    const response = await fetch(`${api.baseURL}/api/sites/telegram-accounts/${id}/`, {
+      method: "PUT",
+      headers: api.getAuthHeaders(),
+      body: JSON.stringify(data),
+    })
 
-    return response.data
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao atualizar conta do Telegram")
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error updating telegram account:", error)
     throw error
@@ -221,11 +266,17 @@ export async function updateTelegramAccount({
 
 export async function deleteTelegramAccount(id: number): Promise<void> {
   try {
-    await api.instance.delete(`/api/sites/telegram-accounts/${id}/`)
+    const response = await fetch(`${api.baseURL}/api/sites/telegram-accounts/${id}/`, {
+      method: "DELETE",
+      headers: api.getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Erro ao excluir conta do Telegram")
+    }
   } catch (error) {
     console.error("Error deleting telegram account:", error)
     throw error
   }
 }
-
-export default apiInstance

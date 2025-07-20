@@ -19,9 +19,7 @@ export function useMonitoredResources() {
     try {
       setLoading(true)
       setError(null)
-      console.log("Iniciando busca de recursos...")
       const data = await MonitoringService.getResources()
-      console.log("Recursos carregados:", data)
       setResources(data)
     } catch (err: any) {
       console.error("Erro ao carregar recursos:", err)
@@ -33,9 +31,7 @@ export function useMonitoredResources() {
 
   const createResource = async (data: CreateMonitoredResourceRequest): Promise<boolean> => {
     try {
-      console.log("Criando recurso:", data)
       const newResource = await MonitoringService.createResource(data)
-      console.log("Recurso criado:", newResource)
       setResources((prev) => [...prev, newResource])
       return true
     } catch (err: any) {
@@ -52,9 +48,7 @@ export function useMonitoredResources() {
 
   const updateResource = async (id: number, data: UpdateMonitoredResourceRequest): Promise<boolean> => {
     try {
-      console.log("Atualizando recurso:", id, data)
       const updatedResource = await MonitoringService.updateResource(id, data)
-      console.log("Recurso atualizado:", updatedResource)
       setResources((prev) => prev.map((r) => (r.id === id ? updatedResource : r)))
       return true
     } catch (err: any) {
@@ -74,7 +68,6 @@ export function useMonitoredResources() {
 
   const deleteResource = async (id: number): Promise<boolean> => {
     try {
-      console.log("Deletando recurso:", id)
       await MonitoringService.deleteResource(id)
       setResources((prev) => prev.filter((r) => r.id !== id))
       return true
@@ -111,9 +104,7 @@ export function useAlerts() {
     try {
       setLoading(true)
       setError(null)
-      console.log("Iniciando busca de alertas...")
       const data = await MonitoringService.getAlerts()
-      console.log("Alertas carregados:", data)
       setAlerts(data)
     } catch (err: any) {
       console.error("Erro ao carregar alertas:", err)
@@ -125,7 +116,6 @@ export function useAlerts() {
 
   const acknowledgeAlert = async (alertId: number, acknowledged = true): Promise<boolean> => {
     try {
-      console.log("Reconhecendo alerta:", alertId, acknowledged)
       await MonitoringService.acknowledgeAlert(alertId, acknowledged)
       setAlerts((prev) => prev.map((alert) => (alert.id === alertId ? { ...alert, acknowledged } : alert)))
       return true
@@ -160,9 +150,7 @@ export function useMonitoringStats() {
     try {
       setLoading(true)
       setError(null)
-      console.log("Iniciando busca de estatísticas...")
       const data = await MonitoringService.getStats()
-      console.log("Estatísticas carregadas:", data)
       setStats(data)
     } catch (err: any) {
       console.error("Erro ao carregar estatísticas:", err)
