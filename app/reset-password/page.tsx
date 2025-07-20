@@ -38,11 +38,11 @@ function ResetPasswordForm() {
 
   useEffect(() => {
     const tokenParam = searchParams.get("token")
-    if (tokenParam) {
-      setToken(tokenParam)
+    if (tokenParam && tokenParam.trim()) {
+      setToken(tokenParam.trim())
       setTokenValid(true)
 
-      // Remove token da URL por segurança
+      // Remove token da URL por segurança após capturar
       const newUrl = window.location.pathname
       window.history.replaceState({}, document.title, newUrl)
     } else {
@@ -146,7 +146,7 @@ function ResetPasswordForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          token,
+          token: token,
           password: formData.password,
         }),
       })
@@ -159,15 +159,18 @@ function ResetPasswordForm() {
           router.push("/login")
         }, 3000)
       } else {
-        throw new Error(data.detail || t.auth.resetPassword.errors.invalidToken)
+        throw new Error(data.detail || "Invalid or expired token")
       }
     } catch (err: any) {
       setErrors({
         submit:
-          err.message ||
-          (language === "pt"
-            ? "Erro ao redefinir senha. Verifique se o link ainda é válido."
-            : "Error resetting password. Check if the link is still valid."),
+          err.message === "Invalid or expired token"
+            ? language === "pt"
+              ? "Token inválido ou expirado. Solicite um novo link de recuperação."
+              : "Invalid or expired token. Request a new recovery link."
+            : language === "pt"
+              ? "Erro ao redefinir senha. Verifique se o link ainda é válido."
+              : "Error resetting password. Check if the link is still valid.",
       })
     } finally {
       setLoading(false)
@@ -178,7 +181,7 @@ function ResetPasswordForm() {
     setLanguage(language === "pt" ? "en" : "pt")
   }
 
-  // Token inválido ou ausente
+  // Token inválido ou ausente - Exatamente como na imagem
   if (tokenValid === false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -192,25 +195,27 @@ function ResetPasswordForm() {
             <CardTitle className="text-2xl font-bold text-red-600">
               {language === "pt" ? "Link Inválido" : "Invalid Link"}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-gray-600">
               {language === "pt"
                 ? "O link de redefinição de senha é inválido ou expirou."
                 : "The password reset link is invalid or has expired."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Alert variant="destructive">
-              <AlertDescription>{errors.token}</AlertDescription>
+            <Alert variant="destructive" className="border-red-200 bg-red-50">
+              <AlertDescription className="text-red-700">{errors.token}</AlertDescription>
             </Alert>
             <div className="space-y-2">
               <Link href="/forgot-password">
-                <Button className="w-full">{language === "pt" ? "Solicitar Novo Link" : "Request New Link"}</Button>
-              </Link>
-              <Link href="/login">
-                <Button variant="outline" className="w-full bg-transparent">
-                  {language === "pt" ? "Voltar ao Login" : "Back to Login"}
+                <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                  {language === "pt" ? "Solicitar Novo Link" : "Request New Link"}
                 </Button>
               </Link>
+              <div className="text-center">
+                <Link href="/login" className="text-sm text-gray-600 hover:text-gray-800">
+                  {language === "pt" ? "Voltar ao Login" : "Back to Login"}
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>
