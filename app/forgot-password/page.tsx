@@ -1,7 +1,7 @@
 "use client"
 
+import { cn } from "@/lib/utils"
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -9,14 +9,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Shield, Mail, ArrowLeft, Globe } from "lucide-react"
+import { Shield, User, Globe, Check } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("")
+  const [formData, setFormData] = useState({
+    identifier: "", // pode ser username ou email
+  })
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [error, setError] = useState("")
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const { language, setLanguage, t } = useLanguage()
   const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
@@ -42,32 +44,59 @@ export default function ForgotPasswordPage() {
     )
   }
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData({ ...formData, [name]: value })
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" })
+    }
+  }
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.identifier.trim()) {
+      newErrors.identifier = t.auth.forgotPassword.errors.identifierRequired
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    if (!validateForm()) return
+
     setLoading(true)
 
     try {
-      const response = await fetch(`${apiUrl}/api/v1/auth/forgot-password`, {
+      // Determinar se é email ou username
+      const isEmail = formData.identifier.includes("@")
+      const requestData = isEmail ? { email: formData.identifier } : { username: formData.identifier }
+
+      const response = await fetch(`${apiUrl}/api/accounts/forgot-password/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(requestData),
       })
 
       if (response.ok) {
-        setSuccess(true)
+        const data = await response.json()
+        if (data.success) {
+          setSuccess(true)
+        } else {
+          throw new Error(t.auth.forgotPassword.errors.generic)
+        }
       } else {
-        throw new Error(language === "pt" ? "Erro ao enviar e-mail" : "Error sending email")
+        const errorData = await response.json()
+        throw new Error(errorData.detail || t.auth.forgotPassword.errors.generic)
       }
     } catch (err: any) {
-      setError(
-        err.message ||
-          (language === "pt"
-            ? "Erro ao enviar instruções. Tente novamente."
-            : "Error sending instructions. Please try again."),
-      )
+      setErrors({
+        submit: err.message || t.auth.forgotPassword.errors.generic,
+      })
     } finally {
       setLoading(false)
     }
@@ -96,39 +125,36 @@ export default function ForgotPasswordPage() {
         <CardContent>
           {success ? (
             <div className="space-y-4">
-              <Alert>
-                <AlertDescription>{t.auth.forgotPassword.success}</AlertDescription>
+              <Alert className="border-green-200 bg-green-50">
+                <Check className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">{t.auth.forgotPassword.success}</AlertDescription>
               </Alert>
-              <Link href="/login">
-                <Button className="w-full">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  {t.auth.forgotPassword.back}
-                </Button>
-              </Link>
+              <div className="text-center text-sm text-muted-foreground">{t.auth.forgotPassword.checkEmail}</div>
             </div>
           ) : (
             <>
-              {error && (
+              {errors.submit && (
                 <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>{errors.submit}</AlertDescription>
                 </Alert>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    {t.auth.forgotPassword.email}
+                  <Label htmlFor="identifier" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    {t.auth.forgotPassword.identifier}
                   </Label>
                   <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={t.auth.forgotPassword.emailPlaceholder}
-                    required
+                    id="identifier"
+                    name="identifier"
+                    type="text"
+                    value={formData.identifier}
+                    onChange={handleChange}
+                    placeholder={t.auth.forgotPassword.identifierPlaceholder}
+                    className={cn(errors.identifier ? "border-red-500" : "")}
                   />
+                  {errors.identifier && <p className="text-sm text-red-500">{errors.identifier}</p>}
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
@@ -136,11 +162,16 @@ export default function ForgotPasswordPage() {
                 </Button>
               </form>
 
-              <div className="mt-6 text-center">
+              <div className="mt-6 text-center space-y-2">
                 <Link href="/login" className="text-sm text-blue-600 hover:underline">
-                  <ArrowLeft className="h-4 w-4 mr-1 inline" />
-                  {t.auth.forgotPassword.back}
+                  {language === "pt" ? "Voltar ao login" : "Back to login"}
                 </Link>
+                <div className="text-sm text-muted-foreground">
+                  {language === "pt" ? "Não tem uma conta?" : "Don't have an account?"}{" "}
+                  <Link href="/register" className="text-blue-600 hover:underline">
+                    {language === "pt" ? "Registre-se" : "Sign up"}
+                  </Link>
+                </div>
               </div>
             </>
           )}

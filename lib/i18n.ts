@@ -1,3 +1,9 @@
+// lib/i18n.ts
+// -----------------------------------------------------------------------------
+// Mantém compatibilidade com todos os módulos que importam `translations`.
+// Inclui o objeto completo (pt | en) e tipagens auxiliares.
+// -----------------------------------------------------------------------------
+
 export type Language = "pt" | "en"
 
 export const translations = {
@@ -138,7 +144,7 @@ export const translations = {
       legal: {
         title: "Legal",
         terms: "Termos de Uso",
-        privacy: "Privacidade",
+        privacy: "Política de Privacidade",
         security: "Segurança",
       },
       social: {
@@ -210,13 +216,20 @@ export const translations = {
       },
       forgotPassword: {
         title: "Recuperar Senha",
-        subtitle: "Digite seu e-mail para receber instruções",
+        subtitle: "Digite seu nome de usuário ou email para receber um link de recuperação",
+        identifier: "Nome de usuário ou Email",
+        identifierPlaceholder: "Digite seu nome de usuário ou email",
         email: "E-mail",
         emailPlaceholder: "Digite seu e-mail",
-        send: "Enviar Instruções",
+        send: "Enviar Link de Recuperação",
         sending: "Enviando...",
-        success: "Instruções enviadas! Verifique seu e-mail.",
+        success: "Link de recuperação enviado com sucesso!",
+        checkEmail: "Verifique seu email para o link de recuperação de senha.",
         back: "Voltar ao Login",
+        errors: {
+          identifierRequired: "Nome de usuário ou email é obrigatório",
+          generic: "Erro ao enviar link de recuperação. Tente novamente.",
+        },
       },
       resetPassword: {
         title: "Redefinir Senha",
@@ -560,13 +573,20 @@ export const translations = {
       },
       forgotPassword: {
         title: "Recover Password",
-        subtitle: "Enter your email to receive instructions",
+        subtitle: "Enter your username or email to receive a recovery link",
+        identifier: "Username or Email",
+        identifierPlaceholder: "Enter your username or email",
         email: "Email",
         emailPlaceholder: "Enter your email",
-        send: "Send Instructions",
+        send: "Send Recovery Link",
         sending: "Sending...",
-        success: "Instructions sent! Check your email.",
+        success: "Recovery link sent successfully!",
+        checkEmail: "Check your email for the password recovery link.",
         back: "Back to Login",
+        errors: {
+          identifierRequired: "Username or email is required",
+          generic: "Error sending recovery link. Please try again.",
+        },
       },
       resetPassword: {
         title: "Reset Password",
@@ -713,3 +733,8 @@ export const translations = {
     },
   },
 }
+
+// -----------------------------------------------------------------------------
+// Caso queira carregar traduções de forma assíncrona no futuro, você pode
+// acrescentar aqui um loader que utiliza dynamic import ou fetch de JSONs.
+// -----------------------------------------------------------------------------

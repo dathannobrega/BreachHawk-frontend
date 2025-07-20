@@ -42,7 +42,7 @@ export default function ResetPasswordPage() {
     if (tokenParam) {
       setToken(tokenParam)
     } else {
-      setErrors({ token: t?.auth?.resetPassword?.errors?.invalidToken || "Invalid Token" })
+      setErrors({ token: t?.auth?.resetPassword?.errors?.invalidToken || "Token inválido ou ausente" })
     }
   }, [searchParams, t])
 
@@ -130,7 +130,7 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
-      const response = await fetch(`${apiUrl}/api/v1/auth/reset-password`, {
+      const response = await fetch(`${apiUrl}/api/accounts/reset-password/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
