@@ -90,8 +90,14 @@ const adminNavigation: NavItem[] = [
     roles: ["admin", "platform_admin"],
   },
   {
-    title: "Configurações Admin",
+    title: "Usuários",
     href: "/admin/users",
+    icon: Users,
+    roles: ["admin"],
+  },
+  {
+    title: "Configurações Admin",
+    href: "/admin/settings",
     icon: Settings,
     roles: ["admin"],
   },
