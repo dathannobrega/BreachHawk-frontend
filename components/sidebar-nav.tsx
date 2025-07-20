@@ -65,7 +65,7 @@ const baseNavigation: NavItem[] = [
   },
   {
     title: "Configurações",
-    href: "/settings",
+    href: "/users",
     icon: Settings,
   },
 ]
@@ -91,7 +91,7 @@ const adminNavigation: NavItem[] = [
   },
   {
     title: "Configurações Admin",
-    href: "/admin/settings",
+    href: "/admin/users",
     icon: Settings,
     roles: ["admin"],
   },
@@ -142,7 +142,7 @@ const platformNavigation: NavItem[] = [
   },
   {
     title: "Configurações",
-    href: "/platform/settings",
+    href: "/platform/users",
     icon: Settings,
     roles: ["platform_admin"],
   },

@@ -48,7 +48,7 @@ export default function UserSettings() {
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState("")
 
-  // Profile settings
+  // Profile users
   const [profileSettings, setProfileSettings] = useState({
     username: "",
     firstName: "",
@@ -62,14 +62,14 @@ export default function UserSettings() {
     preferredLanguage: language,
   })
 
-  // Password settings
+  // Password users
   const [passwordSettings, setPasswordSettings] = useState({
-    oldPassword: "",
+    current_password: "",
     newPassword: "",
     confirmPassword: "",
   })
 
-  // Notification settings
+  // Notification users
   const [notificationSettings, setNotificationSettings] = useState({
     isSubscribed: true,
     emailAlerts: true,
@@ -77,7 +77,7 @@ export default function UserSettings() {
     weeklyReport: true,
   })
 
-  // Security settings - remover configurações não implementadas
+  // Security users - remover configurações não implementadas
   const [securitySettings, setSecuritySettings] = useState({
     loginNotifications: true,
   })
@@ -169,7 +169,7 @@ export default function UserSettings() {
     e.preventDefault()
     setSaving(true)
     try {
-      const response = await fetch(`${apiUrl}/api/v1/users/me`, {
+      const response = await fetch(`${apiUrl}/api/accounts/me/`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -213,7 +213,7 @@ export default function UserSettings() {
     e.preventDefault()
     setSaving(true)
     try {
-      const response = await fetch(`${apiUrl}/api/v1/users/me`, {
+      const response = await fetch(`${apiUrl}/api/accounts/me/`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -256,14 +256,14 @@ export default function UserSettings() {
 
     setSaving(true)
     try {
-      const response = await fetch(`${apiUrl}/api/v1/auth/change-password`, {
+      const response = await fetch(`${apiUrl}/api/accounts/change-password/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
         body: JSON.stringify({
-          old_password: passwordSettings.oldPassword,
+          current_password: passwordSettings.current_password,
           new_password: passwordSettings.newPassword,
         }),
       })
@@ -275,7 +275,7 @@ export default function UserSettings() {
 
       setMessage("Senha alterada com sucesso!")
       setPasswordSettings({
-        oldPassword: "",
+        current_password: "",
         newPassword: "",
         confirmPassword: "",
       })
@@ -507,12 +507,12 @@ export default function UserSettings() {
             <CardTemplate title="Alterar Senha" description="Mantenha sua conta segura com uma senha forte">
               <FormTemplate title="" description="" onSubmit={handlePasswordSubmit}>
                 <div className="space-y-2">
-                  <Label htmlFor="oldPassword">Senha Atual</Label>
+                  <Label htmlFor="current_password">Senha Atual</Label>
                   <Input
-                    id="oldPassword"
+                    id="current_password"
                     type="password"
-                    value={passwordSettings.oldPassword}
-                    onChange={(e) => setPasswordSettings({ ...passwordSettings, oldPassword: e.target.value })}
+                    value={passwordSettings.current_password}
+                    onChange={(e) => setPasswordSettings({ ...passwordSettings, current_password: e.target.value })}
                     required
                   />
                 </div>

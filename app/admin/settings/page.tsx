@@ -1,460 +1,456 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Building, Users, Palette, Globe, Upload, Trash2, UserPlus } from "lucide-react"
+import { Mail, Shield, Send, TestTube, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import { useLanguage } from "@/contexts/language-context"
 import DashboardLayout from "@/components/dashboard-layout"
+import SettingsTemplate from "@/components/templates/settings-template"
+import ConfigFormTemplate from "@/components/templates/config-form-template"
+import { smtpService } from "@/services/smtp-service"
+import { passwordPolicyService } from "@/services/password-policy-service"
+import type { SMTPConfigRead } from "@/types/smtp"
+import type { PasswordPolicyRead } from "@/types/password-policy"
 
-export default function AdminSettings() {
+export default function PlatformSettings() {
   const { user, isAuthenticated, loading } = useAuth()
-  const { t } = useLanguage()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState("company")
-  const [saving, setSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState("smtp")
   const [message, setMessage] = useState("")
+  const [messageType, setMessageType] = useState<"success" | "error" | "warning">("success")
 
-  // Company settings
-  const [companySettings, setCompanySettings] = useState({
-    name: user?.company?.name || "",
-    domain: user?.company?.domain || "",
-    logo: user?.company?.logo || "",
-    description: "",
-    website: "",
-    phone: "",
-    address: "",
+  // SMTP State
+  const [smtpSettings, setSmtpSettings] = useState<SMTPConfigRead>({
+    host: "",
+    port: 587,
+    username: "",
+    password: "",
+    from_email: "",
   })
+  const [loadingSmtp, setLoadingSmtp] = useState(false)
+  const [savingSmtp, setSavingSmtp] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [testEmail, setTestEmail] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
 
-  // Branding settings
-  const [brandingSettings, setBrandingSettings] = useState({
-    primaryColor: "#3b82f6",
-    secondaryColor: "#10b981",
-    logoUrl: "",
-    faviconUrl: "",
-    customCss: "",
-    showBranding: true,
+  // Password Policy State
+  const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicyRead>({
+    min_length: 8,
+    require_uppercase: true,
+    require_lowercase: true,
+    require_numbers: true,
+    require_symbols: true,
   })
-
-  // Users data
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: "João Silva",
-      email: "joao@empresa.com",
-      role: "user",
-      status: "active",
-      lastLogin: "2023-05-15",
-    },
-    {
-      id: 2,
-      name: "Maria Santos",
-      email: "maria@empresa.com",
-      role: "admin",
-      status: "active",
-      lastLogin: "2023-05-14",
-    },
-    {
-      id: 3,
-      name: "Pedro Costa",
-      email: "pedro@empresa.com",
-      role: "user",
-      status: "inactive",
-      lastLogin: "2023-05-10",
-    },
-  ])
+  const [loadingPolicy, setLoadingPolicy] = useState(false)
+  const [savingPolicy, setSavingPolicy] = useState(false)
 
   useEffect(() => {
     if (!loading && (!isAuthenticated || user?.role !== "admin")) {
       router.push("/login")
     }
-  }, [isAuthenticated, loading, user])
+  }, [isAuthenticated, loading, user, router])
+
+  // Load SMTP config
+  useEffect(() => {
+    if (isAuthenticated && user?.role === "admin" && activeTab === "smtp") {
+      loadSmtpConfig()
+    }
+  }, [isAuthenticated, user, activeTab])
+
+  // Load Password Policy
+  useEffect(() => {
+    if (isAuthenticated && user?.role === "admin" && activeTab === "security") {
+      loadPasswordPolicy()
+    }
+  }, [isAuthenticated, user, activeTab])
+
+  const showMessage = (msg: string, type: "success" | "error" | "warning" = "success") => {
+    setMessage(msg)
+    setMessageType(type)
+    setTimeout(() => setMessage(""), 5000)
+  }
+
+  const loadSmtpConfig = async () => {
+    setLoadingSmtp(true)
+    try {
+      const config = await smtpService.getConfig()
+      setSmtpSettings(config)
+    } catch (error: any) {
+      console.error("Erro ao carregar configurações SMTP:", error)
+      showMessage("Erro ao carregar configurações SMTP", "error")
+    } finally {
+      setLoadingSmtp(false)
+    }
+  }
+
+  const loadPasswordPolicy = async () => {
+    setLoadingPolicy(true)
+    try {
+      const policy = await passwordPolicyService.getPolicy()
+      setPasswordPolicy(policy)
+    } catch (error: any) {
+      console.error("Erro ao carregar política de senhas:", error)
+      showMessage("Erro ao carregar política de senhas", "error")
+    } finally {
+      setLoadingPolicy(false)
+    }
+  }
+
+  const handleSmtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingSmtp(true)
+    try {
+      await smtpService.updateConfig(smtpSettings)
+      showMessage("Configurações SMTP salvas com sucesso!", "success")
+    } catch (error: any) {
+      showMessage(`Erro ao salvar configurações SMTP: ${error.message}`, "error")
+    } finally {
+      setSavingSmtp(false)
+    }
+  }
+
+  const handleTestEmail = async () => {
+    if (!testEmail || !testEmail.includes("@")) {
+      setTestResult({
+        success: false,
+        message: "Por favor, informe um email válido para teste.",
+      })
+      return
+    }
+
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const result = await smtpService.testEmail(testEmail)
+
+      if (result.success) {
+        setTestResult({
+          success: true,
+          message: `Email de teste enviado com sucesso para ${testEmail}! Verifique a caixa de entrada.`,
+        })
+      } else {
+        setTestResult({
+          success: false,
+          message: "Falha ao enviar email de teste. Verifique as configurações SMTP.",
+        })
+      }
+    } catch (error: any) {
+      setTestResult({
+        success: false,
+        message: `Erro ao testar configurações SMTP: ${error.message}`,
+      })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const handlePasswordPolicySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingPolicy(true)
+    try {
+      await passwordPolicyService.updatePolicy(passwordPolicy)
+      showMessage("Política de senhas salva com sucesso!", "success")
+    } catch (error: any) {
+      showMessage(`Erro ao salvar política de senhas: ${error.message}`, "error")
+    } finally {
+      setSavingPolicy(false)
+    }
+  }
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>
-  }
-
-  if (!user || user.role !== "admin") return null
-
-  const handleCompanySubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
-    try {
-      // Simular API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      setMessage(t.admin.settings.company.settingsSaved)
-      setTimeout(() => setMessage(""), 3000)
-    } catch (error) {
-      setMessage("Erro ao salvar configurações")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleBrandingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
-    try {
-      // Simular API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      setMessage(t.admin.settings.branding.brandingSaved)
-      setTimeout(() => setMessage(""), 3000)
-    } catch (error) {
-      setMessage("Erro ao salvar configurações")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleUserAction = (userId: number, action: string) => {
-    setUsers(
-      users.map((user) =>
-        user.id === userId
-          ? {
-              ...user,
-              status: action === "activate" ? "active" : action === "deactivate" ? "inactive" : user.status,
-            }
-          : user,
-      ),
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-2">Carregando...</span>
+        </div>
+      </DashboardLayout>
     )
-    setMessage(action === "activate" ? t.admin.settings.users.userActivated : t.admin.settings.users.userDeactivated)
-    setTimeout(() => setMessage(""), 3000)
   }
+
+  if (!user || user.role !== "platform_admin") return null
+
+  const tabs = [
+    {
+      id: "smtp",
+      label: "SMTP",
+      icon: <Mail className="h-4 w-4" />,
+      content: (
+        <ConfigFormTemplate
+          title="Configurações SMTP"
+          description="Configure o servidor de email para envio de notificações"
+          icon={<Mail className="h-5 w-5" />}
+          onSubmit={handleSmtpSubmit}
+          submitLabel="Salvar Configurações SMTP"
+          isSubmitting={savingSmtp}
+          extraActions={
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  placeholder="email@teste.com"
+                  className="h-9 w-48"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestEmail}
+                  disabled={testing || !testEmail}
+                  className="h-9 flex items-center gap-2"
+                >
+                  {testing ? (
+                    <>
+                      <TestTube className="h-4 w-4 animate-spin" />
+                      Testando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Testar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          }
+        >
+          {loadingSmtp ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2">Carregando configurações...</span>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="smtpHost">Servidor SMTP *</Label>
+                  <Input
+                    id="smtpHost"
+                    value={smtpSettings.host}
+                    onChange={(e) => setSmtpSettings({ ...smtpSettings, host: e.target.value })}
+                    placeholder="smtp.gmail.com"
+                    className="h-11"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="smtpPort">Porta *</Label>
+                  <Input
+                    id="smtpPort"
+                    type="number"
+                    value={smtpSettings.port}
+                    onChange={(e) => setSmtpSettings({ ...smtpSettings, port: Number.parseInt(e.target.value) })}
+                    placeholder="587"
+                    className="h-11"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="smtpUsername">Usuário *</Label>
+                  <Input
+                    id="smtpUsername"
+                    value={smtpSettings.username}
+                    onChange={(e) => setSmtpSettings({ ...smtpSettings, username: e.target.value })}
+                    placeholder="usuario@gmail.com"
+                    className="h-11"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="smtpPassword">Senha *</Label>
+                  <div className="relative">
+                    <Input
+                      id="smtpPassword"
+                      type={showPassword ? "text" : "password"}
+                      value={smtpSettings.password || ""}
+                      onChange={(e) => setSmtpSettings({ ...smtpSettings, password: e.target.value })}
+                      placeholder="••••••••"
+                      className="h-11 pr-10"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-11 px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-gray-400" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="fromEmail">Email do Remetente *</Label>
+                <Input
+                  id="fromEmail"
+                  type="email"
+                  value={smtpSettings.from_email}
+                  onChange={(e) => setSmtpSettings({ ...smtpSettings, from_email: e.target.value })}
+                  placeholder="noreply@breachhawk.com"
+                  className="h-11"
+                  required
+                />
+              </div>
+
+              {/* Test Result */}
+              {testResult && (
+                <Alert
+                  className={`${testResult.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
+                >
+                  <div className="flex items-center gap-2">
+                    {testResult.success ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-red-600" />
+                    )}
+                    <AlertDescription className={testResult.success ? "text-green-800" : "text-red-800"}>
+                      {testResult.message}
+                    </AlertDescription>
+                  </div>
+                </Alert>
+              )}
+            </div>
+          )}
+        </ConfigFormTemplate>
+      ),
+    },
+    {
+      id: "security",
+      label: "Segurança",
+      icon: <Shield className="h-4 w-4" />,
+      content: (
+        <ConfigFormTemplate
+          title="Política de Senhas"
+          description="Configure os requisitos de segurança para senhas dos usuários"
+          icon={<Shield className="h-5 w-5" />}
+          onSubmit={handlePasswordPolicySubmit}
+          submitLabel="Salvar Política de Senhas"
+          isSubmitting={savingPolicy}
+        >
+          {loadingPolicy ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2">Carregando política...</span>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="minLength">Comprimento Mínimo</Label>
+                <Input
+                  id="minLength"
+                  type="number"
+                  value={passwordPolicy.min_length}
+                  onChange={(e) =>
+                    setPasswordPolicy({
+                      ...passwordPolicy,
+                      min_length: Number.parseInt(e.target.value),
+                    })
+                  }
+                  min="6"
+                  max="32"
+                  className="h-11 max-w-xs"
+                />
+                <p className="text-sm text-gray-500">Número mínimo de caracteres (6-32)</p>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-lg font-medium">Requisitos de Caracteres</h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium">Letras Maiúsculas</Label>
+                      <p className="text-sm text-gray-600">Requer pelo menos uma letra maiúscula (A-Z)</p>
+                    </div>
+                    <Switch
+                      checked={passwordPolicy.require_uppercase}
+                      onCheckedChange={(checked) =>
+                        setPasswordPolicy({ ...passwordPolicy, require_uppercase: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium">Letras Minúsculas</Label>
+                      <p className="text-sm text-gray-600">Requer pelo menos uma letra minúscula (a-z)</p>
+                    </div>
+                    <Switch
+                      checked={passwordPolicy.require_lowercase}
+                      onCheckedChange={(checked) =>
+                        setPasswordPolicy({ ...passwordPolicy, require_lowercase: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium">Números</Label>
+                      <p className="text-sm text-gray-600">Requer pelo menos um número (0-9)</p>
+                    </div>
+                    <Switch
+                      checked={passwordPolicy.require_numbers}
+                      onCheckedChange={(checked) => setPasswordPolicy({ ...passwordPolicy, require_numbers: checked })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium">Símbolos Especiais</Label>
+                      <p className="text-sm text-gray-600">Requer pelo menos um símbolo (!@#$%^&*)</p>
+                    </div>
+                    <Switch
+                      checked={passwordPolicy.require_symbols}
+                      onCheckedChange={(checked) => setPasswordPolicy({ ...passwordPolicy, require_symbols: checked })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview da política */}
+              <div className="p-4 bg-gray-50 rounded-lg border">
+                <h5 className="font-medium mb-2">Prévia da Política</h5>
+                <p className="text-sm text-gray-600">{passwordPolicyService.getPolicyDescription(passwordPolicy)}</p>
+              </div>
+            </div>
+          )}
+        </ConfigFormTemplate>
+      ),
+    },
+  ]
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">{t.admin.settings.title}</h1>
-          <p className="text-gray-600 mt-2">{t.admin.settings.subtitle}</p>
-        </div>
-
-        {message && (
-          <Alert className="mb-6">
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="company" className="flex items-center gap-2">
-              <Building className="h-4 w-4" />
-              Empresa
-            </TabsTrigger>
-            <TabsTrigger value="branding" className="flex items-center gap-2">
-              <Palette className="h-4 w-4" />
-              Marca
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              {t.admin.settings.users.title}
-            </TabsTrigger>
-            <TabsTrigger value="domains" className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              Domínios
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Company Settings */}
-          <TabsContent value="company">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.admin.settings.company.title}</CardTitle>
-                <CardDescription>{t.admin.settings.company.subtitle}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleCompanySubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="companyName">{t.admin.settings.company.name}</Label>
-                      <Input
-                        id="companyName"
-                        value={companySettings.name}
-                        onChange={(e) => setCompanySettings({ ...companySettings, name: e.target.value })}
-                        placeholder={t.admin.settings.company.namePlaceholder}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="companyDomain">{t.admin.settings.company.domain}</Label>
-                      <Input
-                        id="companyDomain"
-                        value={companySettings.domain}
-                        onChange={(e) => setCompanySettings({ ...companySettings, domain: e.target.value })}
-                        placeholder={t.admin.settings.company.domainPlaceholder}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="companyWebsite">{t.admin.settings.company.website}</Label>
-                      <Input
-                        id="companyWebsite"
-                        value={companySettings.website}
-                        onChange={(e) => setCompanySettings({ ...companySettings, website: e.target.value })}
-                        placeholder={t.admin.settings.company.websitePlaceholder}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="companyPhone">{t.admin.settings.company.phone}</Label>
-                      <Input
-                        id="companyPhone"
-                        value={companySettings.phone}
-                        onChange={(e) => setCompanySettings({ ...companySettings, phone: e.target.value })}
-                        placeholder={t.admin.settings.company.phonePlaceholder}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="companyDescription">{t.admin.settings.company.description}</Label>
-                    <Textarea
-                      id="companyDescription"
-                      value={companySettings.description}
-                      onChange={(e) => setCompanySettings({ ...companySettings, description: e.target.value })}
-                      placeholder={t.admin.settings.company.descriptionPlaceholder}
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="companyAddress">{t.admin.settings.company.address}</Label>
-                    <Textarea
-                      id="companyAddress"
-                      value={companySettings.address}
-                      onChange={(e) => setCompanySettings({ ...companySettings, address: e.target.value })}
-                      placeholder={t.admin.settings.company.addressPlaceholder}
-                      rows={2}
-                    />
-                  </div>
-
-                  <Button type="submit" disabled={saving}>
-                    {saving ? "Salvando..." : t.admin.settings.company.saveSettings}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Branding Settings */}
-          <TabsContent value="branding">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.admin.settings.branding.title}</CardTitle>
-                <CardDescription>{t.admin.settings.branding.subtitle}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleBrandingSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="primaryColor">{t.admin.settings.branding.primaryColor}</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="primaryColor"
-                          type="color"
-                          value={brandingSettings.primaryColor}
-                          onChange={(e) => setBrandingSettings({ ...brandingSettings, primaryColor: e.target.value })}
-                          className="w-16 h-10"
-                        />
-                        <Input
-                          value={brandingSettings.primaryColor}
-                          onChange={(e) => setBrandingSettings({ ...brandingSettings, primaryColor: e.target.value })}
-                          placeholder="#3b82f6"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="secondaryColor">{t.admin.settings.branding.secondaryColor}</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="secondaryColor"
-                          type="color"
-                          value={brandingSettings.secondaryColor}
-                          onChange={(e) => setBrandingSettings({ ...brandingSettings, secondaryColor: e.target.value })}
-                          className="w-16 h-10"
-                        />
-                        <Input
-                          value={brandingSettings.secondaryColor}
-                          onChange={(e) => setBrandingSettings({ ...brandingSettings, secondaryColor: e.target.value })}
-                          placeholder="#10b981"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="logoUrl">{t.admin.settings.branding.logoUrl}</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="logoUrl"
-                        value={brandingSettings.logoUrl}
-                        onChange={(e) => setBrandingSettings({ ...brandingSettings, logoUrl: e.target.value })}
-                        placeholder={t.admin.settings.branding.logoPlaceholder}
-                      />
-                      <Button type="button" variant="outline">
-                        <Upload className="h-4 w-4 mr-2" />
-                        {t.admin.settings.branding.upload}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="customCss">{t.admin.settings.branding.customCss}</Label>
-                    <Textarea
-                      id="customCss"
-                      value={brandingSettings.customCss}
-                      onChange={(e) => setBrandingSettings({ ...brandingSettings, customCss: e.target.value })}
-                      placeholder={t.admin.settings.branding.customCssPlaceholder}
-                      rows={6}
-                      className="font-mono"
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="showBranding"
-                      checked={brandingSettings.showBranding}
-                      onCheckedChange={(checked) => setBrandingSettings({ ...brandingSettings, showBranding: checked })}
-                    />
-                    <Label htmlFor="showBranding">{t.admin.settings.branding.showBranding}</Label>
-                  </div>
-
-                  <Button type="submit" disabled={saving}>
-                    {saving ? "Salvando..." : t.admin.settings.branding.saveBranding}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Users Management */}
-          <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>{t.admin.settings.users.title}</CardTitle>
-                    <CardDescription>{t.admin.settings.users.subtitle}</CardDescription>
-                  </div>
-                  <Button>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    {t.admin.settings.users.addUser}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t.admin.settings.users.name}</TableHead>
-                      <TableHead>{t.admin.settings.users.email}</TableHead>
-                      <TableHead>{t.admin.settings.users.role}</TableHead>
-                      <TableHead>{t.admin.settings.users.status}</TableHead>
-                      <TableHead>{t.admin.settings.users.lastLogin}</TableHead>
-                      <TableHead>{t.admin.settings.users.actions}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                            {user.role === "admin" ? t.admin.settings.users.admin : t.admin.settings.users.user}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={user.status === "active" ? "default" : "secondary"}>
-                            {user.status === "active" ? t.admin.settings.users.active : t.admin.settings.users.inactive}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{user.lastLogin}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                handleUserAction(user.id, user.status === "active" ? "deactivate" : "activate")
-                              }
-                            >
-                              {user.status === "active"
-                                ? t.admin.settings.users.deactivate
-                                : t.admin.settings.users.activate}
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              {t.admin.settings.users.edit}
-                            </Button>
-                            <Button size="sm" variant="destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Domains Management */}
-          <TabsContent value="domains">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.admin.settings.domains.title}</CardTitle>
-                <CardDescription>{t.admin.settings.domains.subtitle}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Input placeholder={t.admin.settings.domains.addDomainPlaceholder} className="flex-1" />
-                    <Button>{t.admin.settings.domains.addDomain}</Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h4 className="font-medium">{t.admin.settings.domains.monitoredDomains}</h4>
-                    <div className="space-y-2">
-                      {["exemplo.com", "test.org", "demo.net"].map((domain, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Globe className="h-4 w-4 text-gray-500" />
-                            <span className="font-medium">{domain}</span>
-                            <Badge variant="default">{t.admin.settings.users.active}</Badge>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button size="sm" variant="outline">
-                              {t.admin.settings.domains.configure}
-                            </Button>
-                            <Button size="sm" variant="destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+      <SettingsTemplate
+        title="Configurações da Plataforma"
+        description="Gerencie as configurações essenciais do BreachHawk"
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        message={message}
+        messageType={messageType}
+      />
     </DashboardLayout>
   )
 }
