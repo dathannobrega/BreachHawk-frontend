@@ -30,6 +30,8 @@ export default function ResourcesPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingResource, setEditingResource] = useState<any>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
   const [formData, setFormData] = useState({
     keyword: "",
     description: "",
@@ -51,7 +53,9 @@ export default function ResourcesPage() {
       return
     }
 
+    setIsCreating(true)
     try {
+      console.log("Iniciando criação de recurso:", formData)
       await createResource({
         keyword: formData.keyword.trim(),
         description: formData.description.trim() || undefined,
@@ -65,11 +69,14 @@ export default function ResourcesPage() {
       setIsCreateDialogOpen(false)
       setFormData({ keyword: "", description: "" })
     } catch (error: any) {
+      console.error("Erro na criação:", error)
       toast({
         title: "Erro",
-        description: error.message,
+        description: error.message || "Erro ao criar recurso",
         variant: "destructive",
       })
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -83,6 +90,7 @@ export default function ResourcesPage() {
       return
     }
 
+    setIsUpdating(true)
     try {
       await updateResource(editingResource.id, {
         keyword: formData.keyword.trim(),
@@ -100,9 +108,11 @@ export default function ResourcesPage() {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message,
+        description: error.message || "Erro ao atualizar recurso",
         variant: "destructive",
       })
+    } finally {
+      setIsUpdating(false)
     }
   }
 
@@ -120,7 +130,7 @@ export default function ResourcesPage() {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message,
+        description: error.message || "Erro ao excluir recurso",
         variant: "destructive",
       })
     }
@@ -172,6 +182,7 @@ export default function ResourcesPage() {
                     value={formData.keyword}
                     onChange={(e) => setFormData({ ...formData, keyword: e.target.value })}
                     placeholder="Ex: minha-empresa, email@empresa.com"
+                    disabled={isCreating}
                   />
                 </div>
                 <div>
@@ -182,14 +193,24 @@ export default function ResourcesPage() {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Descrição opcional do recurso"
                     rows={3}
+                    disabled={isCreating}
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={isCreating}>
                   Cancelar
                 </Button>
-                <Button onClick={handleCreate}>Criar Recurso</Button>
+                <Button onClick={handleCreate} disabled={isCreating}>
+                  {isCreating ? (
+                    <>
+                      <LoadingSpinner size="sm" className="mr-2" />
+                      Criando...
+                    </>
+                  ) : (
+                    "Criar Recurso"
+                  )}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -252,7 +273,13 @@ export default function ResourcesPage() {
           ) : error ? (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                {error}
+                <br />
+                <small className="text-xs opacity-75">
+                  Nota: Durante o desenvolvimento, dados de exemplo são exibidos quando a API não está disponível.
+                </small>
+              </AlertDescription>
             </Alert>
           ) : filteredResources.length === 0 ? (
             <Card>
@@ -336,6 +363,7 @@ export default function ResourcesPage() {
                   value={formData.keyword}
                   onChange={(e) => setFormData({ ...formData, keyword: e.target.value })}
                   placeholder="Ex: minha-empresa, email@empresa.com"
+                  disabled={isUpdating}
                 />
               </div>
               <div>
@@ -346,14 +374,24 @@ export default function ResourcesPage() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Descrição opcional do recurso"
                   rows={3}
+                  disabled={isUpdating}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isUpdating}>
                 Cancelar
               </Button>
-              <Button onClick={handleEdit}>Salvar Alterações</Button>
+              <Button onClick={handleEdit} disabled={isUpdating}>
+                {isUpdating ? (
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar Alterações"
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

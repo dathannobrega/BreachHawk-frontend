@@ -1,15 +1,20 @@
 export interface MonitoredResource {
   id: number
   keyword: string
+  description?: string
+  is_active: boolean
   created_at: string
+  updated_at: string
 }
 
 export interface CreateMonitoredResourceRequest {
   keyword: string
+  description?: string
 }
 
 export interface UpdateMonitoredResourceRequest {
   keyword: string
+  description?: string
 }
 
 export interface LeakData {
@@ -33,6 +38,7 @@ export interface Alert {
   resource: number
   leak: LeakData
   created_at: string
+  acknowledged?: boolean
 }
 
 export interface MonitoringStats {

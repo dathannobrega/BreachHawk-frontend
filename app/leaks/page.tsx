@@ -113,10 +113,10 @@ export default function LeaksPage() {
         title: acknowledged ? "Alerta reconhecido" : "Reconhecimento removido",
         description: acknowledged ? "O alerta foi marcado como reconhecido" : "O reconhecimento do alerta foi removido",
       })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar o status do alerta",
+        description: error.message || "Não foi possível atualizar o status do alerta",
         variant: "destructive",
       })
     }
@@ -258,7 +258,13 @@ export default function LeaksPage() {
           ) : error ? (
             <UIAlert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                {error}
+                <br />
+                <small className="text-xs opacity-75">
+                  Nota: Durante o desenvolvimento, dados de exemplo são exibidos quando a API não está disponível.
+                </small>
+              </AlertDescription>
             </UIAlert>
           ) : filteredAlerts.length === 0 ? (
             <Card>
