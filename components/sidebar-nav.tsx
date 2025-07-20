@@ -32,8 +32,6 @@ import {
   Target,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import { useLanguage } from "@/contexts/language-context"
-import { getTranslations } from "@/lib/i18n"
 
 interface NavItem {
   title: string
@@ -43,6 +41,113 @@ interface NavItem {
   roles?: string[]
 }
 
+const baseNavigation: NavItem[] = [
+  {
+    title: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Recursos Monitorados",
+    href: "/resources",
+    icon: Target,
+  },
+  {
+    title: "Pesquisar",
+    href: "/search",
+    icon: Search,
+  },
+  {
+    title: "Vazamentos",
+    href: "/leaks",
+    icon: AlertTriangle,
+    badge: "3",
+  },
+  {
+    title: "Configurações",
+    href: "/settings",
+    icon: Settings,
+  },
+]
+
+const adminNavigation: NavItem[] = [
+  {
+    title: "Dashboard Admin",
+    href: "/admin/dashboard",
+    icon: Shield,
+    roles: ["admin"],
+  },
+  {
+    title: "Sites",
+    href: "/admin/sites",
+    icon: Globe,
+    roles: ["admin"],
+  },
+  {
+    title: "Monitoramento",
+    href: "/admin/monitoring",
+    icon: Eye,
+    roles: ["admin", "platform_admin"],
+  },
+  {
+    title: "Configurações Admin",
+    href: "/admin/settings",
+    icon: Settings,
+    roles: ["admin"],
+  },
+]
+
+const platformNavigation: NavItem[] = [
+  {
+    title: "Dashboard Plataforma",
+    href: "/platform/dashboard",
+    icon: Database,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Usuários",
+    href: "/platform/users",
+    icon: Users,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Empresas",
+    href: "/platform/companies",
+    icon: Building2,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Sites",
+    href: "/platform/sites",
+    icon: Globe,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Contas Telegram",
+    href: "/platform/telegram-accounts",
+    icon: MessageSquare,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Planos",
+    href: "/platform/plans",
+    icon: Package,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Faturamento",
+    href: "/platform/billing",
+    icon: CreditCard,
+    roles: ["platform_admin"],
+  },
+  {
+    title: "Configurações",
+    href: "/platform/settings",
+    icon: Settings,
+    roles: ["platform_admin"],
+  },
+]
+
 interface SidebarNavProps {
   onItemClick?: () => void
 }
@@ -50,121 +155,12 @@ interface SidebarNavProps {
 export function SidebarNav({ onItemClick }: SidebarNavProps) {
   const pathname = usePathname()
   const { user, logout } = useAuth()
-  const { language } = useLanguage()
-  const t = getTranslations(language)
   const [adminExpanded, setAdminExpanded] = useState(pathname.startsWith("/admin"))
   const [platformExpanded, setPlatformExpanded] = useState(pathname.startsWith("/platform"))
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const isAdmin = user?.role === "admin"
   const isPlatformAdmin = user?.role === "platform_admin"
-
-  const baseNavigation: NavItem[] = [
-    {
-      title: t.sidebar.dashboard,
-      href: "/dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      title: t.sidebar.resources,
-      href: "/resources",
-      icon: Target,
-    },
-    {
-      title: t.sidebar.search,
-      href: "/search",
-      icon: Search,
-    },
-    {
-      title: t.sidebar.leaks,
-      href: "/leaks",
-      icon: AlertTriangle,
-      badge: "3",
-    },
-    {
-      title: t.sidebar.settings,
-      href: "/settings",
-      icon: Settings,
-    },
-  ]
-
-  const adminNavigation: NavItem[] = [
-    {
-      title: "Dashboard Admin",
-      href: "/admin/dashboard",
-      icon: Shield,
-      roles: ["admin"],
-    },
-    {
-      title: "Sites",
-      href: "/admin/sites",
-      icon: Globe,
-      roles: ["admin"],
-    },
-    {
-      title: "Monitoramento",
-      href: "/admin/monitoring",
-      icon: Eye,
-      roles: ["admin", "platform_admin"],
-    },
-    {
-      title: "Configurações Admin",
-      href: "/admin/settings",
-      icon: Settings,
-      roles: ["admin"],
-    },
-  ]
-
-  const platformNavigation: NavItem[] = [
-    {
-      title: "Dashboard Plataforma",
-      href: "/platform/dashboard",
-      icon: Database,
-      roles: ["platform_admin"],
-    },
-    {
-      title: t.sidebar.users,
-      href: "/platform/users",
-      icon: Users,
-      roles: ["platform_admin"],
-    },
-    {
-      title: t.sidebar.companies,
-      href: "/platform/companies",
-      icon: Building2,
-      roles: ["platform_admin"],
-    },
-    {
-      title: "Sites",
-      href: "/platform/sites",
-      icon: Globe,
-      roles: ["platform_admin"],
-    },
-    {
-      title: "Contas Telegram",
-      href: "/platform/telegram-accounts",
-      icon: MessageSquare,
-      roles: ["platform_admin"],
-    },
-    {
-      title: "Planos",
-      href: "/platform/plans",
-      icon: Package,
-      roles: ["platform_admin"],
-    },
-    {
-      title: t.sidebar.billing,
-      href: "/platform/billing",
-      icon: CreditCard,
-      roles: ["platform_admin"],
-    },
-    {
-      title: t.sidebar.settings,
-      href: "/platform/settings",
-      icon: Settings,
-      roles: ["platform_admin"],
-    },
-  ]
 
   const getUserDisplayName = () => {
     if (!user) return "Usuário"
@@ -344,7 +340,7 @@ export function SidebarNav({ onItemClick }: SidebarNavProps) {
           className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
         >
           <LogOut className="h-4 w-4 mr-2" />
-          {t.sidebar.logout}
+          Sair
         </Button>
       </div>
     </div>

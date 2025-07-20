@@ -155,19 +155,3 @@ export function useMonitoringStats() {
     refetch: fetchStats,
   }
 }
-
-/**
- * Hook unificado que reúne recursos, alertas e estatísticas
- * de monitoramento em um único objeto.
- */
-export function useMonitoring() {
-  const resourcesCtx = useMonitoredResources()
-  const alertsCtx = useAlerts()
-  const statsCtx = useMonitoringStats()
-
-  return {
-    ...resourcesCtx,
-    ...alertsCtx,
-    ...statsCtx,
-  }
-}

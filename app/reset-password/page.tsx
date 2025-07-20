@@ -1,7 +1,7 @@
 "use client"
 
+import { cn } from "@/lib/utils"
 import type React from "react"
-
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -10,67 +10,144 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { PasswordValidator } from "@/components/ui/password-validator"
-import { AuthLayout } from "@/components/templates/auth-layout"
+import { Shield, Lock, Check, Globe, Eye, EyeOff, CheckCircle, AlertTriangle } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { getTranslations } from "@/lib/i18n"
-import { ArrowLeft, Lock, CheckCircle, AlertTriangle } from "lucide-react"
+import PasswordValidator from "@/components/ui/password-validator"
+import { passwordPolicyService } from "@/services/password-policy-service"
+import type { PasswordPolicyRead } from "@/types/password-policy"
 
 function ResetPasswordForm() {
+  const [formData, setFormData] = useState({
+    password: "",
+    confirmPassword: "",
+  })
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [token, setToken] = useState("")
+  const [tokenValid, setTokenValid] = useState<boolean | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicyRead | null>(null)
+  const [loadingPolicy, setLoadingPolicy] = useState(true)
+
+  const { language, setLanguage, t } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { language } = useLanguage()
-  const t = getTranslations(language)
-
-  const [token, setToken] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState("")
-  const [tokenValid, setTokenValid] = useState<boolean | null>(null)
+  const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
   useEffect(() => {
-    const urlToken = searchParams.get("token")
-    if (urlToken) {
-      setToken(urlToken)
-      // Remove token from URL for security
+    const tokenParam = searchParams.get("token")
+    if (tokenParam) {
+      setToken(tokenParam)
+      setTokenValid(true)
+
+      // Remove token da URL por segurança
       const newUrl = window.location.pathname
       window.history.replaceState({}, document.title, newUrl)
-      setTokenValid(true)
     } else {
       setTokenValid(false)
-      setError(t.auth.resetPassword.errors.invalidToken)
+      setErrors({
+        token:
+          language === "pt"
+            ? "Token inválido ou ausente. Solicite um novo link de recuperação."
+            : "Invalid or missing token. Request a new recovery link.",
+      })
     }
-  }, [searchParams, t])
+  }, [searchParams, language])
+
+  // Carregar política de senhas pública
+  useEffect(() => {
+    const loadPasswordPolicy = async () => {
+      try {
+        const policy = await passwordPolicyService.getPublicPolicy()
+        setPasswordPolicy(policy)
+      } catch (error) {
+        console.error("Erro ao carregar política de senhas:", error)
+        // Usar política padrão se não conseguir carregar
+        setPasswordPolicy({
+          min_length: 8,
+          require_uppercase: true,
+          require_lowercase: true,
+          require_numbers: true,
+          require_symbols: true,
+        })
+      } finally {
+        setLoadingPolicy(false)
+      }
+    }
+
+    loadPasswordPolicy()
+  }, [])
+
+  // Verificação de segurança para garantir que t está disponível
+  if (!t || !t.auth || !t.auth.resetPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData({ ...formData, [name]: value })
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" })
+    }
+  }
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.password) {
+      newErrors.password = t.auth.resetPassword.errors.passwordRequired
+    } else if (passwordPolicy) {
+      const validation = passwordPolicyService.validatePassword(formData.password, passwordPolicy)
+      if (!validation.isValid) {
+        newErrors.password = validation.errors[0]
+      }
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = t.auth.resetPassword.errors.passwordMismatch
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateForm()) return
 
-    if (password !== confirmPassword) {
-      setError(t.auth.resetPassword.errors.passwordMismatch)
-      return
-    }
-
-    if (!password.trim()) {
-      setError(t.auth.resetPassword.errors.passwordRequired)
-      return
-    }
-
-    setIsLoading(true)
-    setError("")
+    setLoading(true)
 
     try {
-      // This endpoint doesn't exist yet in the backend, but we're preparing for it
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/accounts/reset-password/`, {
+      const response = await fetch(`${apiUrl}/api/accounts/reset-password/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           token,
-          password,
+          password: formData.password,
         }),
       })
 
@@ -82,138 +159,216 @@ function ResetPasswordForm() {
           router.push("/login")
         }, 3000)
       } else {
-        setError(data.detail || t.auth.resetPassword.errors.invalidToken)
+        throw new Error(data.detail || t.auth.resetPassword.errors.invalidToken)
       }
-    } catch (err) {
-      setError("Erro de conexão. Tente novamente.")
+    } catch (err: any) {
+      setErrors({
+        submit:
+          err.message ||
+          (language === "pt"
+            ? "Erro ao redefinir senha. Verifique se o link ainda é válido."
+            : "Error resetting password. Check if the link is still valid."),
+      })
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
+  const toggleLanguage = () => {
+    setLanguage(language === "pt" ? "en" : "pt")
+  }
+
+  // Token inválido ou ausente
   if (tokenValid === false) {
     return (
-      <AuthLayout>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
+            <div className="flex items-center justify-center mb-4">
+              <div className="rounded-full bg-red-100 p-3">
+                <AlertTriangle className="h-8 w-8 text-red-600" />
+              </div>
             </div>
-            <CardTitle className="text-2xl font-bold text-slate-900">Token Inválido</CardTitle>
-            <CardDescription className="text-slate-600">
-              O link de redefinição de senha é inválido ou expirou.
+            <CardTitle className="text-2xl font-bold text-red-600">
+              {language === "pt" ? "Link Inválido" : "Invalid Link"}
+            </CardTitle>
+            <CardDescription>
+              {language === "pt"
+                ? "O link de redefinição de senha é inválido ou expirou."
+                : "The password reset link is invalid or has expired."}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Button onClick={() => router.push("/forgot-password")} className="w-full">
-                Solicitar Novo Link
-              </Button>
-              <Button onClick={() => router.push("/login")} variant="outline" className="w-full">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Voltar ao Login
-              </Button>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertDescription>{errors.token}</AlertDescription>
+            </Alert>
+            <div className="space-y-2">
+              <Link href="/forgot-password">
+                <Button className="w-full">{language === "pt" ? "Solicitar Novo Link" : "Request New Link"}</Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="outline" className="w-full bg-transparent">
+                  {language === "pt" ? "Voltar ao Login" : "Back to Login"}
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
-      </AuthLayout>
+      </div>
     )
   }
 
+  // Sucesso
   if (success) {
     return (
-      <AuthLayout>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="flex items-center justify-center mb-4">
+              <div className="rounded-full bg-green-100 p-3">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
             </div>
-            <CardTitle className="text-2xl font-bold text-slate-900">Senha Redefinida!</CardTitle>
-            <CardDescription className="text-slate-600">{t.auth.resetPassword.success}</CardDescription>
+            <CardTitle className="text-2xl font-bold text-green-600">
+              {language === "pt" ? "Senha Redefinida!" : "Password Reset!"}
+            </CardTitle>
+            <CardDescription>{t.auth.resetPassword.success}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => router.push("/login")} className="w-full">
-              Ir para Login
-            </Button>
+            <Alert className="border-green-200 bg-green-50 mb-4">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                {language === "pt"
+                  ? "Sua senha foi redefinida com sucesso. Redirecionando para o login..."
+                  : "Your password has been successfully reset. Redirecting to login..."}
+              </AlertDescription>
+            </Alert>
+            <Link href="/login">
+              <Button className="w-full">{language === "pt" ? "Ir para Login" : "Go to Login"}</Button>
+            </Link>
           </CardContent>
         </Card>
-      </AuthLayout>
+      </div>
     )
   }
 
   return (
-    <AuthLayout>
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-            <Lock className="h-6 w-6 text-blue-600" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <Card className="w-full max-w-lg">
+        <CardHeader className="space-y-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Shield className="h-8 w-8 text-blue-600 mr-2" />
+              <CardTitle className="text-2xl font-bold">{t.auth.resetPassword.title}</CardTitle>
+            </div>
+            <Button variant="ghost" size="sm" onClick={toggleLanguage}>
+              <Globe className="h-4 w-4 mr-1" />
+              {language === "pt" ? "EN" : "PT"}
+            </Button>
           </div>
-          <CardTitle className="text-2xl font-bold text-slate-900">{t.auth.resetPassword.title}</CardTitle>
-          <CardDescription className="text-slate-600">{t.auth.resetPassword.subtitle}</CardDescription>
+          <CardDescription className="text-center">{t.auth.resetPassword.subtitle}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+          {errors.submit && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{errors.submit}</AlertDescription>
+            </Alert>
+          )}
 
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="password">{t.auth.resetPassword.password}</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={t.auth.resetPassword.passwordPlaceholder}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-                className="h-11"
-              />
+              <Label htmlFor="password" className="flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                {t.auth.resetPassword.password}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder={t.auth.resetPassword.passwordPlaceholder}
+                  className={cn("pr-10", errors.password ? "border-red-500" : "")}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-10 px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </Button>
+              </div>
+              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+
+              {/* Validador de senha em tempo real */}
+              {passwordPolicy && !loadingPolicy && (
+                <PasswordValidator password={formData.password} policy={passwordPolicy} />
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">{t.auth.resetPassword.confirmPassword}</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder={t.auth.resetPassword.confirmPasswordPlaceholder}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                disabled={isLoading}
-                className="h-11"
-              />
+              <Label htmlFor="confirmPassword" className="flex items-center gap-2">
+                <Check className="h-4 w-4" />
+                {t.auth.resetPassword.confirmPassword}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder={t.auth.resetPassword.confirmPasswordPlaceholder}
+                  className={cn("pr-10", errors.confirmPassword ? "border-red-500" : "")}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-10 px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </Button>
+              </div>
+              {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
             </div>
-
-            {password && <PasswordValidator password={password} />}
 
             <Button
               type="submit"
-              className="w-full h-11"
-              disabled={isLoading || !password.trim() || !confirmPassword.trim() || password !== confirmPassword}
+              className="w-full"
+              disabled={loading || loadingPolicy || !formData.password || !formData.confirmPassword}
             >
-              {isLoading ? (
+              {loading ? (
                 <>
-                  <LoadingSpinner className="mr-2 h-4 w-4" />
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   {t.auth.resetPassword.resetting}
                 </>
               ) : (
                 t.auth.resetPassword.reset
               )}
             </Button>
-
-            <div className="text-center">
-              <Link href="/login" className="text-sm text-blue-600 hover:text-blue-500 font-medium">
-                <ArrowLeft className="mr-1 h-3 w-3 inline" />
-                Voltar ao Login
-              </Link>
-            </div>
           </form>
+
+          <div className="mt-6 text-center">
+            <Link href="/login" className="text-sm text-blue-600 hover:underline">
+              {language === "pt" ? "Voltar ao login" : "Back to login"}
+            </Link>
+          </div>
         </CardContent>
       </Card>
-    </AuthLayout>
+    </div>
   )
 }
 
@@ -221,13 +376,13 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <AuthLayout>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
           <Card className="w-full max-w-md">
             <CardContent className="flex items-center justify-center py-8">
-              <LoadingSpinner className="h-8 w-8" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </CardContent>
           </Card>
-        </AuthLayout>
+        </div>
       }
     >
       <ResetPasswordForm />

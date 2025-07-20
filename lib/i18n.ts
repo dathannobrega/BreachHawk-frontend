@@ -11,6 +11,7 @@ export const translations = {
       login: "Entrar",
       getStarted: "Começar",
     },
+
     // Sidebar
     sidebar: {
       dashboard: "Dashboard",
@@ -28,8 +29,8 @@ export const translations = {
       logout: "Sair",
       profile: "Perfil",
       notifications: "Notificações",
-      resources: "Recursos Monitorados",
     },
+
     // Hero
     hero: {
       title: "Monitore a",
@@ -45,6 +46,7 @@ export const translations = {
         users: "Usuários Ativos",
       },
     },
+
     // Features
     features: {
       tag: "Recursos",
@@ -81,6 +83,7 @@ export const translations = {
         ],
       },
     },
+
     // Pricing
     pricing: {
       tag: "Preços",
@@ -117,6 +120,7 @@ export const translations = {
         cta: "Falar com Vendas",
       },
     },
+
     // Footer
     footer: {
       company: {
@@ -142,6 +146,7 @@ export const translations = {
       },
       copyright: "Todos os direitos reservados.",
     },
+
     // Auth
     auth: {
       login: {
@@ -230,6 +235,7 @@ export const translations = {
         },
       },
     },
+
     // Settings
     settings: {
       title: "Configurações",
@@ -287,6 +293,7 @@ export const translations = {
         loginHistoryDesc: "Visualize seus últimos acessos",
       },
     },
+
     // Admin
     admin: {
       settings: {
@@ -355,6 +362,7 @@ export const translations = {
       },
     },
   },
+
   en: {
     // Navigation
     nav: {
@@ -365,6 +373,7 @@ export const translations = {
       login: "Sign In",
       getStarted: "Get Started",
     },
+
     // Sidebar
     sidebar: {
       dashboard: "Dashboard",
@@ -382,8 +391,8 @@ export const translations = {
       logout: "Logout",
       profile: "Profile",
       notifications: "Notifications",
-      resources: "Monitored Resources",
     },
+
     // Hero
     hero: {
       title: "Monitor the",
@@ -398,6 +407,7 @@ export const translations = {
         users: "Active Users",
       },
     },
+
     // Features
     features: {
       tag: "Features",
@@ -429,6 +439,7 @@ export const translations = {
         ],
       },
     },
+
     // Pricing
     pricing: {
       tag: "Pricing",
@@ -459,6 +470,7 @@ export const translations = {
         cta: "Contact Sales",
       },
     },
+
     // Footer
     footer: {
       company: {
@@ -484,6 +496,7 @@ export const translations = {
       },
       copyright: "All rights reserved.",
     },
+
     // Auth
     auth: {
       login: {
@@ -572,6 +585,7 @@ export const translations = {
         },
       },
     },
+
     // Settings
     settings: {
       title: "Settings",
@@ -629,6 +643,7 @@ export const translations = {
         loginHistoryDesc: "View your recent access history",
       },
     },
+
     // Admin
     admin: {
       settings: {
@@ -697,25 +712,4 @@ export const translations = {
       },
     },
   },
-}
-
-// Helper function to get translations
-export function getTranslations(language: Language = "pt") {
-  return translations[language]
-}
-
-// Helper function to get nested translation
-export function t(key: string, language: Language = "pt"): string {
-  const keys = key.split(".")
-  let value: any = translations[language]
-
-  for (const k of keys) {
-    if (value && typeof value === "object" && k in value) {
-      value = value[k]
-    } else {
-      return key // Return key if translation not found
-    }
-  }
-
-  return typeof value === "string" ? value : key
 }
