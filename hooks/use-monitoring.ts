@@ -19,11 +19,13 @@ export function useMonitoredResources() {
     try {
       setLoading(true)
       setError(null)
+      console.log("Hook: Iniciando busca de recursos...")
       const data = await MonitoringService.getResources()
+      console.log("Hook: Recursos carregados:", data)
       setResources(data)
     } catch (err: any) {
-      console.error("Erro ao carregar recursos:", err)
-      setError(err.response?.data?.detail || err.message || "Erro ao carregar recursos")
+      console.error("Hook: Erro ao carregar recursos:", err)
+      setError(err.message || "Erro ao carregar recursos")
     } finally {
       setLoading(false)
     }
@@ -31,56 +33,45 @@ export function useMonitoredResources() {
 
   const createResource = async (data: CreateMonitoredResourceRequest): Promise<boolean> => {
     try {
+      console.log("Hook: Criando recurso:", data)
       const newResource = await MonitoringService.createResource(data)
+      console.log("Hook: Recurso criado:", newResource)
       setResources((prev) => [...prev, newResource])
       return true
     } catch (err: any) {
-      console.error("Erro ao criar recurso:", err)
-      if (err.response?.status === 400) {
-        throw new Error(err.response.data.detail || "Dados inválidos")
-      }
-      if (err.response?.status === 409) {
-        throw new Error("Recurso já monitorado")
-      }
+      console.error("Hook: Erro ao criar recurso:", err)
       throw new Error(err.message || "Erro ao criar recurso")
     }
   }
 
   const updateResource = async (id: number, data: UpdateMonitoredResourceRequest): Promise<boolean> => {
     try {
+      console.log("Hook: Atualizando recurso:", { id, data })
       const updatedResource = await MonitoringService.updateResource(id, data)
+      console.log("Hook: Recurso atualizado:", updatedResource)
       setResources((prev) => prev.map((r) => (r.id === id ? updatedResource : r)))
       return true
     } catch (err: any) {
-      console.error("Erro ao atualizar recurso:", err)
-      if (err.response?.status === 400) {
-        throw new Error(err.response.data.detail || "Dados inválidos")
-      }
-      if (err.response?.status === 404) {
-        throw new Error("Recurso não encontrado")
-      }
-      if (err.response?.status === 409) {
-        throw new Error("Recurso já monitorado")
-      }
+      console.error("Hook: Erro ao atualizar recurso:", err)
       throw new Error(err.message || "Erro ao atualizar recurso")
     }
   }
 
   const deleteResource = async (id: number): Promise<boolean> => {
     try {
+      console.log("Hook: Deletando recurso:", id)
       await MonitoringService.deleteResource(id)
+      console.log("Hook: Recurso deletado")
       setResources((prev) => prev.filter((r) => r.id !== id))
       return true
     } catch (err: any) {
-      console.error("Erro ao deletar recurso:", err)
-      if (err.response?.status === 404) {
-        throw new Error("Recurso não encontrado")
-      }
+      console.error("Hook: Erro ao deletar recurso:", err)
       throw new Error(err.message || "Erro ao excluir recurso")
     }
   }
 
   useEffect(() => {
+    console.log("Hook: Componente montado, carregando recursos...")
     fetchResources()
   }, [])
 
@@ -104,11 +95,13 @@ export function useAlerts() {
     try {
       setLoading(true)
       setError(null)
+      console.log("Hook: Iniciando busca de alertas...")
       const data = await MonitoringService.getAlerts()
+      console.log("Hook: Alertas carregados:", data)
       setAlerts(data)
     } catch (err: any) {
-      console.error("Erro ao carregar alertas:", err)
-      setError(err.response?.data?.detail || err.message || "Erro ao carregar alertas")
+      console.error("Hook: Erro ao carregar alertas:", err)
+      setError(err.message || "Erro ao carregar alertas")
     } finally {
       setLoading(false)
     }
@@ -116,19 +109,19 @@ export function useAlerts() {
 
   const acknowledgeAlert = async (alertId: number, acknowledged = true): Promise<boolean> => {
     try {
+      console.log("Hook: Reconhecendo alerta:", { alertId, acknowledged })
       await MonitoringService.acknowledgeAlert(alertId, acknowledged)
+      console.log("Hook: Alerta reconhecido")
       setAlerts((prev) => prev.map((alert) => (alert.id === alertId ? { ...alert, acknowledged } : alert)))
       return true
     } catch (err: any) {
-      console.error("Erro ao reconhecer alerta:", err)
-      if (err.response?.status === 404) {
-        throw new Error("Alerta não encontrado")
-      }
+      console.error("Hook: Erro ao reconhecer alerta:", err)
       throw new Error(err.message || "Erro ao reconhecer alerta")
     }
   }
 
   useEffect(() => {
+    console.log("Hook: Componente montado, carregando alertas...")
     fetchAlerts()
   }, [])
 
@@ -150,10 +143,12 @@ export function useMonitoringStats() {
     try {
       setLoading(true)
       setError(null)
+      console.log("Hook: Iniciando busca de estatísticas...")
       const data = await MonitoringService.getStats()
+      console.log("Hook: Estatísticas carregadas:", data)
       setStats(data)
     } catch (err: any) {
-      console.error("Erro ao carregar estatísticas:", err)
+      console.error("Hook: Erro ao carregar estatísticas:", err)
       setError(err.message || "Erro ao carregar estatísticas")
     } finally {
       setLoading(false)
@@ -161,6 +156,7 @@ export function useMonitoringStats() {
   }
 
   useEffect(() => {
+    console.log("Hook: Componente montado, carregando estatísticas...")
     fetchStats()
   }, [])
 

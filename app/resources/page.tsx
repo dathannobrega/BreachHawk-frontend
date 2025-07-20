@@ -51,6 +51,7 @@ export default function ResourcesPage() {
 
     setIsCreating(true)
     try {
+      console.log("Página: Iniciando criação de recurso:", formData)
       await createResource({
         keyword: formData.keyword.trim(),
       })
@@ -63,6 +64,7 @@ export default function ResourcesPage() {
       setIsCreateDialogOpen(false)
       setFormData({ keyword: "" })
     } catch (error: any) {
+      console.error("Página: Erro na criação:", error)
       toast({
         title: "Erro",
         description: error.message || "Erro ao criar recurso",
@@ -85,6 +87,7 @@ export default function ResourcesPage() {
 
     setIsUpdating(true)
     try {
+      console.log("Página: Iniciando atualização de recurso:", { id: editingResource.id, data: formData })
       await updateResource(editingResource.id, {
         keyword: formData.keyword.trim(),
       })
@@ -98,6 +101,7 @@ export default function ResourcesPage() {
       setEditingResource(null)
       setFormData({ keyword: "" })
     } catch (error: any) {
+      console.error("Página: Erro na atualização:", error)
       toast({
         title: "Erro",
         description: error.message || "Erro ao atualizar recurso",
@@ -114,12 +118,14 @@ export default function ResourcesPage() {
     }
 
     try {
+      console.log("Página: Iniciando deleção de recurso:", id)
       await deleteResource(id)
       toast({
         title: "Sucesso",
         description: "Recurso excluído com sucesso",
       })
     } catch (error: any) {
+      console.error("Página: Erro na deleção:", error)
       toast({
         title: "Erro",
         description: error.message || "Erro ao excluir recurso",
@@ -129,6 +135,7 @@ export default function ResourcesPage() {
   }
 
   const openEditDialog = (resource: any) => {
+    console.log("Página: Abrindo dialog de edição para:", resource)
     setEditingResource(resource)
     setFormData({
       keyword: resource.keyword,
@@ -139,6 +146,8 @@ export default function ResourcesPage() {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("pt-BR")
   }
+
+  console.log("Página: Estado atual:", { resources, loading, error })
 
   return (
     <DashboardLayout>
@@ -236,11 +245,18 @@ export default function ResourcesPage() {
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <LoadingSpinner size="lg" />
+              <span className="ml-2 text-slate-600">Carregando recursos...</span>
             </div>
           ) : error ? (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                {error}
+                <br />
+                <small className="text-xs opacity-75 mt-2 block">
+                  Verifique se a API está rodando e se você está autenticado.
+                </small>
+              </AlertDescription>
             </Alert>
           ) : filteredResources.length === 0 ? (
             <Card>

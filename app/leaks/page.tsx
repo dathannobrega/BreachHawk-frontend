@@ -108,12 +108,14 @@ export default function LeaksPage() {
 
   const handleAcknowledge = async (alertId: number, acknowledged: boolean) => {
     try {
+      console.log("Página: Reconhecendo alerta:", { alertId, acknowledged })
       await acknowledgeAlert(alertId, acknowledged)
       toast({
         title: acknowledged ? "Alerta reconhecido" : "Reconhecimento removido",
         description: acknowledged ? "O alerta foi marcado como reconhecido" : "O reconhecimento do alerta foi removido",
       })
     } catch (error: any) {
+      console.error("Página: Erro ao reconhecer alerta:", error)
       toast({
         title: "Erro",
         description: error.message || "Não foi possível atualizar o status do alerta",
@@ -123,6 +125,8 @@ export default function LeaksPage() {
   }
 
   const stats = getStatsData()
+
+  console.log("Página: Estado atual dos alertas:", { alerts, loading, error })
 
   return (
     <DashboardLayout>
@@ -254,11 +258,18 @@ export default function LeaksPage() {
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <LoadingSpinner size="lg" />
+              <span className="ml-2 text-slate-600">Carregando alertas...</span>
             </div>
           ) : error ? (
             <UIAlert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                {error}
+                <br />
+                <small className="text-xs opacity-75 mt-2 block">
+                  Verifique se a API está rodando e se você está autenticado.
+                </small>
+              </AlertDescription>
             </UIAlert>
           ) : filteredAlerts.length === 0 ? (
             <Card>

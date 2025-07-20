@@ -2,12 +2,116 @@ import type { SiteRead, SiteCreate, SiteUpdate, TelegramAccountRead, TelegramAcc
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
+// Helper para obter token de autenticação
+const getAuthToken = (): string | null => {
+  if (typeof window === "undefined") return null
+  return localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
+}
+
+// Helper para headers de autenticação
+const getAuthHeaders = (): HeadersInit => {
+  const token = getAuthToken()
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  }
+}
+
+// Cliente API usando fetch nativo
 export const api = {
   baseURL: API_BASE_URL,
 
-  // Helper para headers de autenticação
+  async get(url: string) {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: "Erro na requisição" }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    return {
+      data: await response.json(),
+      status: response.status,
+    }
+  },
+
+  async post(url: string, data?: any) {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: data ? JSON.stringify(data) : undefined,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: "Erro na requisição" }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    return {
+      data: await response.json(),
+      status: response.status,
+    }
+  },
+
+  async put(url: string, data?: any) {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: data ? JSON.stringify(data) : undefined,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: "Erro na requisição" }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    return {
+      data: await response.json(),
+      status: response.status,
+    }
+  },
+
+  async patch(url: string, data?: any) {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: data ? JSON.stringify(data) : undefined,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: "Erro na requisição" }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    return {
+      data: await response.json(),
+      status: response.status,
+    }
+  },
+
+  async delete(url: string) {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: "Erro na requisição" }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    return {
+      data: response.status === 204 ? null : await response.json(),
+      status: response.status,
+    }
+  },
+
+  // Helper para headers de autenticação (compatibilidade)
   getAuthHeaders: () => {
-    const token = localStorage.getItem("access_token")
+    const token = getAuthToken()
     return {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -16,7 +120,7 @@ export const api = {
 
   // Helper para headers de upload
   getUploadHeaders: () => {
-    const token = localStorage.getItem("access_token")
+    const token = getAuthToken()
     return {
       Authorization: `Bearer ${token}`,
       // Não incluir Content-Type para FormData
