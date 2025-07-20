@@ -258,20 +258,23 @@ export default function LeaksPage() {
           ) : error ? (
             <UIAlert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                {error}
-                <br />
-                <small className="text-xs opacity-75">
-                  Nota: Durante o desenvolvimento, dados de exemplo são exibidos quando a API não está disponível.
-                </small>
-              </AlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </UIAlert>
           ) : filteredAlerts.length === 0 ? (
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center text-slate-500">
                   <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
-                  <p>Nenhum vazamento encontrado com os filtros aplicados</p>
+                  <p>
+                    {searchTerm || statusFilter !== "all" || severityFilter !== "all" || acknowledgedFilter !== "all"
+                      ? "Nenhum vazamento encontrado com os filtros aplicados"
+                      : "Nenhum vazamento detectado ainda"}
+                  </p>
+                  {alerts.length === 0 && (
+                    <p className="text-sm mt-2">
+                      Crie recursos monitorados para começar a detectar vazamentos automaticamente.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

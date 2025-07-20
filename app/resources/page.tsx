@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useMonitoredResources } from "@/hooks/use-monitoring"
-import { Target, Plus, Search, Edit, Trash2, AlertTriangle, Calendar, Eye, CheckCircle } from "lucide-react"
+import { Target, Plus, Search, Edit, Trash2, AlertTriangle, Calendar } from "lucide-react"
 import DashboardLayout from "@/components/dashboard-layout"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
@@ -21,7 +21,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 
 export default function ResourcesPage() {
   const { resources, loading, error, createResource, updateResource, deleteResource } = useMonitoredResources()
@@ -34,13 +33,10 @@ export default function ResourcesPage() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [formData, setFormData] = useState({
     keyword: "",
-    description: "",
   })
 
-  const filteredResources = resources.filter(
-    (resource) =>
-      resource.keyword.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      resource.description?.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredResources = resources.filter((resource) =>
+    resource.keyword.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const handleCreate = async () => {
@@ -55,21 +51,18 @@ export default function ResourcesPage() {
 
     setIsCreating(true)
     try {
-      console.log("Iniciando criação de recurso:", formData)
       await createResource({
         keyword: formData.keyword.trim(),
-        description: formData.description.trim() || undefined,
       })
 
       toast({
         title: "Sucesso",
-        description: "Recurso criado com sucesso",
+        description: "Recurso criado com sucesso. Um scan inicial foi iniciado automaticamente.",
       })
 
       setIsCreateDialogOpen(false)
-      setFormData({ keyword: "", description: "" })
+      setFormData({ keyword: "" })
     } catch (error: any) {
-      console.error("Erro na criação:", error)
       toast({
         title: "Erro",
         description: error.message || "Erro ao criar recurso",
@@ -94,7 +87,6 @@ export default function ResourcesPage() {
     try {
       await updateResource(editingResource.id, {
         keyword: formData.keyword.trim(),
-        description: formData.description.trim() || undefined,
       })
 
       toast({
@@ -104,7 +96,7 @@ export default function ResourcesPage() {
 
       setIsEditDialogOpen(false)
       setEditingResource(null)
-      setFormData({ keyword: "", description: "" })
+      setFormData({ keyword: "" })
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -140,17 +132,12 @@ export default function ResourcesPage() {
     setEditingResource(resource)
     setFormData({
       keyword: resource.keyword,
-      description: resource.description || "",
     })
     setIsEditDialogOpen(true)
   }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("pt-BR")
-  }
-
-  const getStatusColor = (isActive: boolean) => {
-    return isActive ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-800"
   }
 
   return (
@@ -172,7 +159,10 @@ export default function ResourcesPage() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Criar Novo Recurso</DialogTitle>
-                <DialogDescription>Adicione uma nova palavra-chave para monitoramento de vazamentos</DialogDescription>
+                <DialogDescription>
+                  Adicione uma nova palavra-chave para monitoramento de vazamentos. Um scan inicial será executado
+                  automaticamente.
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
@@ -184,17 +174,9 @@ export default function ResourcesPage() {
                     placeholder="Ex: minha-empresa, email@empresa.com"
                     disabled={isCreating}
                   />
-                </div>
-                <div>
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Descrição opcional do recurso"
-                    rows={3}
-                    disabled={isCreating}
-                  />
+                  <p className="text-sm text-slate-500 mt-1">
+                    Digite uma palavra-chave, nome de empresa ou email para monitorar
+                  </p>
                 </div>
               </div>
               <DialogFooter>
@@ -217,34 +199,19 @@ export default function ResourcesPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Recursos</CardTitle>
+              <CardTitle className="text-sm font-medium">Total de Recursos Monitorados</CardTitle>
               <Target className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">{resources.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ativos</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{resources.filter((r) => r.is_active).length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Inativos</CardTitle>
-              <Eye className="h-4 w-4 text-slate-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-600">{resources.filter((r) => !r.is_active).length}</div>
+              <p className="text-xs text-slate-500 mt-1">
+                {resources.length === 0
+                  ? "Nenhum recurso sendo monitorado"
+                  : `${resources.length} ${resources.length === 1 ? "recurso ativo" : "recursos ativos"}`}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -255,7 +222,7 @@ export default function ResourcesPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
               <Input
-                placeholder="Buscar recursos por palavra-chave ou descrição..."
+                placeholder="Buscar recursos por palavra-chave..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -273,13 +240,7 @@ export default function ResourcesPage() {
           ) : error ? (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                {error}
-                <br />
-                <small className="text-xs opacity-75">
-                  Nota: Durante o desenvolvimento, dados de exemplo são exibidos quando a API não está disponível.
-                </small>
-              </AlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : filteredResources.length === 0 ? (
             <Card>
@@ -308,22 +269,14 @@ export default function ResourcesPage() {
                     <div className="space-y-3 flex-1">
                       <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="font-semibold text-lg text-slate-900">{resource.keyword}</h3>
-                        <Badge className={getStatusColor(resource.is_active)}>
-                          {resource.is_active ? "Ativo" : "Inativo"}
-                        </Badge>
+                        <Badge className="bg-green-100 text-green-800">Ativo</Badge>
                         <Badge variant="outline">ID #{resource.id}</Badge>
                       </div>
-
-                      {resource.description && <p className="text-slate-600">{resource.description}</p>}
 
                       <div className="flex items-center gap-4 text-sm text-slate-500">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
                           <span>Criado: {formatDate(resource.created_at)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>Atualizado: {formatDate(resource.updated_at)}</span>
                         </div>
                       </div>
                     </div>
@@ -353,7 +306,7 @@ export default function ResourcesPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Editar Recurso</DialogTitle>
-              <DialogDescription>Atualize as informações do recurso monitorado</DialogDescription>
+              <DialogDescription>Atualize a palavra-chave do recurso monitorado</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -363,17 +316,6 @@ export default function ResourcesPage() {
                   value={formData.keyword}
                   onChange={(e) => setFormData({ ...formData, keyword: e.target.value })}
                   placeholder="Ex: minha-empresa, email@empresa.com"
-                  disabled={isUpdating}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-description">Descrição</Label>
-                <Textarea
-                  id="edit-description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Descrição opcional do recurso"
-                  rows={3}
                   disabled={isUpdating}
                 />
               </div>

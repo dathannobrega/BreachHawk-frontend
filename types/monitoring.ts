@@ -1,20 +1,15 @@
 export interface MonitoredResource {
   id: number
   keyword: string
-  description?: string
-  is_active: boolean
   created_at: string
-  updated_at: string
 }
 
 export interface CreateMonitoredResourceRequest {
   keyword: string
-  description?: string
 }
 
 export interface UpdateMonitoredResourceRequest {
   keyword: string
-  description?: string
 }
 
 export interface LeakData {
@@ -37,8 +32,8 @@ export interface Alert {
   id: number
   resource: number
   leak: LeakData
+  acknowledged: boolean
   created_at: string
-  acknowledged?: boolean
 }
 
 export interface MonitoringStats {
@@ -46,4 +41,12 @@ export interface MonitoringStats {
   total_alerts: number
   alerts_last_7_days: number
   alerts_last_24h: number
+}
+
+export interface AcknowledgeAlertRequest {
+  acknowledged: boolean
+}
+
+export interface AcknowledgeAlertResponse {
+  acknowledged: boolean
 }
