@@ -65,7 +65,7 @@ const baseNavigation: NavItem[] = [
   },
   {
     title: "Configurações",
-    href: "/users",
+    href: "/settings",
     icon: Settings,
   },
 ]

@@ -211,7 +211,7 @@ export default function PlatformUsers() {
     )
   }
 
-  if (!user || user.role !== "platform_admin") return null
+  if (!user || user.role !== "admin") return null
 
   return (
     <DashboardLayout>

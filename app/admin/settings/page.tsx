@@ -175,7 +175,7 @@ export default function PlatformSettings() {
     )
   }
 
-  if (!user || user.role !== "platform_admin") return null
+  if (!user || user.role !== "admin") return null
 
   const tabs = [
     {
