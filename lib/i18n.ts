@@ -1,333 +1,715 @@
-export interface Translations {
-  auth: {
-    login: {
-      title: string
-      subtitle: string
-      email: string
-      emailPlaceholder: string
-      password: string
-      passwordPlaceholder: string
-      rememberMe: string
-      forgotPassword: string
-      signIn: string
-      signingIn: string
-      noAccount: string
-      signUp: string
-      errors: {
-        emailRequired: string
-        passwordRequired: string
-        invalidCredentials: string
-        serverError: string
-      }
-    }
-    register: {
-      title: string
-      subtitle: string
-      firstName: string
-      firstNamePlaceholder: string
-      lastName: string
-      lastNamePlaceholder: string
-      email: string
-      emailPlaceholder: string
-      username: string
-      usernamePlaceholder: string
-      password: string
-      passwordPlaceholder: string
-      confirmPassword: string
-      confirmPasswordPlaceholder: string
-      agreeTerms: string
-      signUp: string
-      signingUp: string
-      hasAccount: string
-      signIn: string
-      errors: {
-        firstNameRequired: string
-        lastNameRequired: string
-        emailRequired: string
-        usernameRequired: string
-        passwordRequired: string
-        passwordMismatch: string
-        termsRequired: string
-        serverError: string
-      }
-    }
-    forgotPassword: {
-      title: string
-      subtitle: string
-      identifier: string
-      identifierPlaceholder: string
-      send: string
-      sending: string
-      success: {
-        title: string
-        message: string
-      }
-      errors: {
-        identifierRequired: string
-        serverError: string
-      }
-    }
-    resetPassword: {
-      title: string
-      subtitle: string
-      password: string
-      passwordPlaceholder: string
-      confirmPassword: string
-      confirmPasswordPlaceholder: string
-      reset: string
-      resetting: string
-      success: string
-      errors: {
-        passwordRequired: string
-        passwordMismatch: string
-        invalidToken: string
-        serverError: string
-      }
-    }
-  }
-  dashboard: {
-    title: string
-    welcome: string
-    stats: {
-      totalSites: string
-      activeSites: string
-      totalScrapers: string
-      activeScrapers: string
-    }
-  }
-  navigation: {
-    dashboard: string
-    sites: string
-    settings: string
-    logout: string
-  }
-}
+export type Language = "pt" | "en"
 
-const translations: Record<string, Translations> = {
+export const translations = {
   pt: {
+    // Navegação
+    nav: {
+      features: "Recursos",
+      pricing: "Preços",
+      docs: "Documentação",
+      github: "GitHub",
+      login: "Entrar",
+      getStarted: "Começar",
+    },
+
+    // Sidebar
+    sidebar: {
+      dashboard: "Dashboard",
+      search: "Pesquisar",
+      leaks: "Vazamentos",
+      reports: "Relatórios",
+      alerts: "Alertas",
+      settings: "Configurações",
+      users: "Usuários",
+      domains: "Domínios",
+      companies: "Empresas",
+      billing: "Financeiro",
+      analytics: "Analytics",
+      security: "Segurança",
+      logout: "Sair",
+      profile: "Perfil",
+      notifications: "Notificações",
+    },
+
+    // Hero
+    hero: {
+      title: "Monitore a",
+      titleHighlight: "Dark Web",
+      titleEnd: "com Inteligência",
+      subtitle:
+        "Plataforma open source de threat intelligence para detectar vazamentos de dados e ameaças em tempo real.",
+      ctaPrimary: "Ver no GitHub",
+      ctaCloud: "Versão Cloud",
+      stats: {
+        detection: "Taxa de Detecção",
+        monitoring: "Monitoramento",
+        users: "Usuários Ativos",
+      },
+    },
+
+    // Features
+    features: {
+      tag: "Recursos",
+      title: "Tudo que você precisa para monitorar ameaças",
+      subtitle: "Ferramentas poderosas para detectar e responder a ameaças na dark web",
+      openSource: {
+        title: "100% Open Source",
+        description: "Código aberto e transparente para máxima confiança",
+        points: [
+          "Código fonte disponível no GitHub",
+          "Comunidade ativa de desenvolvedores",
+          "Auditoria de segurança pública",
+          "Sem vendor lock-in",
+        ],
+      },
+      monitoring: {
+        title: "Monitoramento 24/7",
+        description: "Vigilância contínua da dark web e fontes de ameaças",
+        points: [
+          "Varredura automática de marketplaces",
+          "Alertas em tempo real",
+          "Múltiplas fontes de dados",
+          "API para integração",
+        ],
+      },
+      detection: {
+        title: "Detecção Avançada",
+        description: "IA e machine learning para identificar ameaças",
+        points: [
+          "Algoritmos de detecção inteligentes",
+          "Análise de padrões suspeitos",
+          "Correlação de dados",
+          "Baixo índice de falsos positivos",
+        ],
+      },
+    },
+
+    // Pricing
+    pricing: {
+      tag: "Preços",
+      title: "Escolha o plano ideal",
+      subtitle: "Opções flexíveis para empresas de todos os tamanhos",
+      monthly: "/mês",
+      popularBadge: "Mais Popular",
+      openSource: {
+        name: "Open Source",
+        price: "Grátis",
+        description: "Para desenvolvedores e pequenas equipes",
+        features: ["Código fonte completo", "Instalação local", "Suporte da comunidade", "Documentação completa"],
+        cta: "Baixar Agora",
+      },
+      cloud: {
+        name: "Cloud",
+        price: "R$ 99",
+        period: "/mês",
+        description: "Para empresas que querem facilidade",
+        features: [
+          "Hospedagem gerenciada",
+          "Backup automático",
+          "Suporte técnico",
+          "Atualizações automáticas",
+          "SSL incluído",
+        ],
+        cta: "Começar Teste",
+      },
+      enterprise: {
+        name: "Enterprise",
+        price: "Personalizado",
+        description: "Para grandes organizações",
+        features: ["Instalação dedicada", "Suporte 24/7", "SLA garantido", "Treinamento incluído", "Customizações"],
+        cta: "Falar com Vendas",
+      },
+    },
+
+    // Footer
+    footer: {
+      company: {
+        title: "Empresa",
+        about: "Sobre",
+        careers: "Carreiras",
+        contact: "Contato",
+      },
+      resources: {
+        title: "Recursos",
+        documentation: "Documentação",
+        blog: "Blog",
+        guides: "Guias",
+      },
+      legal: {
+        title: "Legal",
+        terms: "Termos de Uso",
+        privacy: "Privacidade",
+        security: "Segurança",
+      },
+      social: {
+        title: "Social",
+      },
+      copyright: "Todos os direitos reservados.",
+    },
+
+    // Auth
     auth: {
       login: {
         title: "Entrar",
-        subtitle: "Entre na sua conta para continuar",
-        email: "Email",
-        emailPlaceholder: "Digite seu email",
+        subtitle: "Acesse sua conta BreachHawk",
+        username: "Usuário",
+        usernamePlaceholder: "Digite seu usuário",
         password: "Senha",
         passwordPlaceholder: "Digite sua senha",
-        rememberMe: "Lembrar de mim",
+        loginButton: "Entrar",
+        loggingIn: "Entrando...",
         forgotPassword: "Esqueceu a senha?",
-        signIn: "Entrar",
-        signingIn: "Entrando...",
+        or: "ou",
+        googleLogin: "Entrar com Google",
         noAccount: "Não tem uma conta?",
-        signUp: "Cadastre-se",
-        errors: {
-          emailRequired: "Email é obrigatório",
-          passwordRequired: "Senha é obrigatória",
-          invalidCredentials: "Email ou senha inválidos",
-          serverError: "Erro no servidor. Tente novamente.",
-        },
+        register: "Registrar-se",
+        testCredentials: "Credenciais de teste:",
+        adminCredentials: "Admin: admin / admin123",
+        userCredentials: "Usuário: user / user123",
       },
       register: {
         title: "Criar Conta",
-        subtitle: "Crie sua conta para começar",
+        stepOf: "de",
+        step1: "Informações básicas",
+        step2: "Informações pessoais",
+        username: "Usuário",
+        usernamePlaceholder: "Digite um nome de usuário",
+        email: "E-mail",
+        emailPlaceholder: "Digite seu e-mail",
+        password: "Senha",
+        passwordPlaceholder: "Digite uma senha",
+        confirmPassword: "Confirmar Senha",
+        confirmPasswordPlaceholder: "Confirme sua senha",
         firstName: "Nome",
         firstNamePlaceholder: "Digite seu nome",
         lastName: "Sobrenome",
         lastNamePlaceholder: "Digite seu sobrenome",
-        email: "Email",
-        emailPlaceholder: "Digite seu email",
-        username: "Nome de usuário",
-        usernamePlaceholder: "Digite seu nome de usuário",
-        password: "Senha",
-        passwordPlaceholder: "Digite sua senha",
-        confirmPassword: "Confirmar Senha",
-        confirmPasswordPlaceholder: "Confirme sua senha",
-        agreeTerms: "Concordo com os termos e condições",
-        signUp: "Cadastrar",
-        signingUp: "Cadastrando...",
+        company: "Empresa",
+        companyPlaceholder: "Digite sua empresa (opcional)",
+        jobTitle: "Cargo",
+        jobTitlePlaceholder: "Digite seu cargo (opcional)",
+        terms: "Aceito os",
+        termsLink: "Termos de Uso",
+        and: "e",
+        privacyLink: "Política de Privacidade",
+        next: "Próximo",
+        back: "Voltar",
+        register: "Criar Conta",
+        registering: "Criando...",
         hasAccount: "Já tem uma conta?",
-        signIn: "Entre",
+        login: "Entrar",
         errors: {
-          firstNameRequired: "Nome é obrigatório",
-          lastNameRequired: "Sobrenome é obrigatório",
-          emailRequired: "Email é obrigatório",
-          usernameRequired: "Nome de usuário é obrigatório",
+          usernameRequired: "Usuário é obrigatório",
+          emailRequired: "E-mail é obrigatório",
           passwordRequired: "Senha é obrigatória",
           passwordMismatch: "Senhas não coincidem",
-          termsRequired: "Você deve concordar com os termos",
-          serverError: "Erro no servidor. Tente novamente.",
+          firstNameRequired: "Nome é obrigatório",
+          lastNameRequired: "Sobrenome é obrigatório",
+          termsRequired: "Você deve aceitar os termos",
         },
       },
       forgotPassword: {
         title: "Recuperar Senha",
-        subtitle: "Digite seu email ou nome de usuário para recuperar sua senha",
-        identifier: "Email ou Nome de usuário",
-        identifierPlaceholder: "Digite seu email ou nome de usuário",
-        send: "Enviar Link de Recuperação",
+        subtitle: "Digite seu e-mail para receber instruções",
+        email: "E-mail",
+        emailPlaceholder: "Digite seu e-mail",
+        send: "Enviar Instruções",
         sending: "Enviando...",
-        success: {
-          title: "Email Enviado!",
-          message: "Se o usuário existir, você receberá um email com instruções para redefinir sua senha.",
-        },
-        errors: {
-          identifierRequired: "Email ou nome de usuário é obrigatório",
-          serverError: "Erro no servidor. Tente novamente.",
-        },
+        success: "Instruções enviadas! Verifique seu e-mail.",
+        back: "Voltar ao Login",
       },
       resetPassword: {
         title: "Redefinir Senha",
         subtitle: "Digite sua nova senha",
         password: "Nova Senha",
         passwordPlaceholder: "Digite sua nova senha",
-        confirmPassword: "Confirmar Nova Senha",
+        confirmPassword: "Confirmar Senha",
         confirmPasswordPlaceholder: "Confirme sua nova senha",
         reset: "Redefinir Senha",
         resetting: "Redefinindo...",
-        success: "Senha redefinida com sucesso! Redirecionando para o login...",
+        success: "Senha redefinida com sucesso! Redirecionando...",
         errors: {
-          passwordRequired: "Nova senha é obrigatória",
+          passwordRequired: "Senha é obrigatória",
           passwordMismatch: "Senhas não coincidem",
           invalidToken: "Token inválido ou expirado",
-          serverError: "Erro no servidor. Tente novamente.",
         },
       },
     },
-    dashboard: {
-      title: "Dashboard",
-      welcome: "Bem-vindo",
-      stats: {
-        totalSites: "Total de Sites",
-        activeSites: "Sites Ativos",
-        totalScrapers: "Total de Scrapers",
-        activeScrapers: "Scrapers Ativos",
+
+    // Settings
+    settings: {
+      title: "Configurações",
+      subtitle: "Gerencie suas informações pessoais e preferências",
+      profile: {
+        title: "Informações do Perfil",
+        subtitle: "Atualize suas informações pessoais",
+        email: "E-mail",
+        emailDisabled: "O e-mail não pode ser alterado",
+        organization: "Organização",
+        organizationPlaceholder: "Nome da sua organização",
+        contact: "Contato",
+        contactPlaceholder: "Telefone ou outro meio de contato",
+        language: "Idioma",
+        languageSubtitle: "Escolha seu idioma preferido",
+        subscribed: "Receber comunicações da plataforma",
+        changePhoto: "Alterar Foto",
+        photoFormat: "JPG, PNG até 2MB",
+        saveChanges: "Salvar Alterações",
+        saving: "Salvando...",
+        profileUpdated: "Perfil atualizado com sucesso!",
+        profileError: "Erro ao atualizar perfil",
+      },
+      password: {
+        title: "Alterar Senha",
+        subtitle: "Mantenha sua conta segura com uma senha forte",
+        currentPassword: "Senha Atual",
+        newPassword: "Nova Senha",
+        confirmPassword: "Confirmar Nova Senha",
+        changePassword: "Alterar Senha",
+        changing: "Alterando...",
+        passwordsNotMatch: "As senhas não conferem",
+        passwordChanged: "Senha alterada com sucesso!",
+        passwordError: "Erro ao alterar senha",
+      },
+      notifications: {
+        title: "Preferências de Notificação",
+        subtitle: "Configure como você deseja receber notificações",
+        emailAlerts: "Alertas por E-mail",
+        emailAlertsDesc: "Receba alertas quando novos vazamentos forem detectados",
+        smsAlerts: "Alertas por SMS",
+        smsAlertsDesc: "Receba alertas por SMS para vazamentos críticos",
+        weeklyReport: "Relatório Semanal",
+        weeklyReportDesc: "Receba um resumo semanal das atividades",
+        savePreferences: "Salvar Preferências",
+      },
+      security: {
+        title: "Configurações de Segurança",
+        subtitle: "Gerencie a segurança da sua conta",
+        twoFactor: "Autenticação de Dois Fatores",
+        twoFactorDesc: "Adicione uma camada extra de segurança",
+        sessions: "Sessões Ativas",
+        sessionsDesc: "Gerencie suas sessões ativas",
+        loginHistory: "Histórico de Login",
+        loginHistoryDesc: "Visualize seus últimos acessos",
       },
     },
-    navigation: {
-      dashboard: "Dashboard",
-      sites: "Sites",
-      settings: "Configurações",
-      logout: "Sair",
+
+    // Admin
+    admin: {
+      settings: {
+        title: "Configurações Administrativas",
+        subtitle: "Gerencie as configurações da sua empresa e usuários",
+        company: {
+          title: "Informações da Empresa",
+          subtitle: "Configure as informações básicas da sua empresa",
+          name: "Nome da Empresa",
+          namePlaceholder: "Digite o nome da empresa",
+          domain: "Domínio Principal",
+          domainPlaceholder: "exemplo.com",
+          website: "Website",
+          websitePlaceholder: "https://www.exemplo.com",
+          phone: "Telefone",
+          phonePlaceholder: "(11) 99999-9999",
+          description: "Descrição",
+          descriptionPlaceholder: "Descreva sua empresa...",
+          address: "Endereço",
+          addressPlaceholder: "Endereço completo da empresa",
+          saveSettings: "Salvar Configurações",
+          settingsSaved: "Configurações da empresa salvas com sucesso!",
+        },
+        branding: {
+          title: "Personalização da Marca",
+          subtitle: "Customize a aparência da plataforma para sua empresa",
+          primaryColor: "Cor Primária",
+          secondaryColor: "Cor Secundária",
+          logoUrl: "URL do Logo",
+          logoPlaceholder: "https://exemplo.com/logo.png",
+          customCss: "CSS Personalizado",
+          customCssPlaceholder: "/* Adicione seu CSS personalizado aqui */",
+          showBranding: "Mostrar marca da empresa na interface",
+          upload: "Upload",
+          saveBranding: "Salvar Personalização",
+          brandingSaved: "Configurações de marca salvas com sucesso!",
+        },
+        users: {
+          title: "Gerenciamento de Usuários",
+          subtitle: "Gerencie os usuários da sua empresa",
+          addUser: "Adicionar Usuário",
+          name: "Nome",
+          email: "E-mail",
+          role: "Função",
+          status: "Status",
+          lastLogin: "Último Login",
+          actions: "Ações",
+          admin: "Admin",
+          user: "Usuário",
+          active: "Ativo",
+          inactive: "Inativo",
+          activate: "Ativar",
+          deactivate: "Desativar",
+          edit: "Editar",
+          userActivated: "Usuário ativado com sucesso!",
+          userDeactivated: "Usuário desativado com sucesso!",
+        },
+        domains: {
+          title: "Gerenciamento de Domínios",
+          subtitle: "Configure os domínios monitorados pela sua empresa",
+          addDomain: "Adicionar",
+          addDomainPlaceholder: "Adicionar novo domínio (ex: exemplo.com)",
+          monitoredDomains: "Domínios Monitorados",
+          configure: "Configurar",
+        },
+      },
     },
   },
+
   en: {
+    // Navigation
+    nav: {
+      features: "Features",
+      pricing: "Pricing",
+      docs: "Documentation",
+      github: "GitHub",
+      login: "Sign In",
+      getStarted: "Get Started",
+    },
+
+    // Sidebar
+    sidebar: {
+      dashboard: "Dashboard",
+      search: "Search",
+      leaks: "Leaks",
+      reports: "Reports",
+      alerts: "Alerts",
+      settings: "Settings",
+      users: "Users",
+      domains: "Domains",
+      companies: "Companies",
+      billing: "Billing",
+      analytics: "Analytics",
+      security: "Security",
+      logout: "Logout",
+      profile: "Profile",
+      notifications: "Notifications",
+    },
+
+    // Hero
+    hero: {
+      title: "Monitor the",
+      titleHighlight: "Dark Web",
+      titleEnd: "with Intelligence",
+      subtitle: "Open source threat intelligence platform to detect data breaches and threats in real time.",
+      ctaPrimary: "View on GitHub",
+      ctaCloud: "Cloud Version",
+      stats: {
+        detection: "Detection Rate",
+        monitoring: "Monitoring",
+        users: "Active Users",
+      },
+    },
+
+    // Features
+    features: {
+      tag: "Features",
+      title: "Everything you need to monitor threats",
+      subtitle: "Powerful tools to detect and respond to dark web threats",
+      openSource: {
+        title: "100% Open Source",
+        description: "Open and transparent code for maximum trust",
+        points: [
+          "Source code available on GitHub",
+          "Active developer community",
+          "Public security audit",
+          "No vendor lock-in",
+        ],
+      },
+      monitoring: {
+        title: "24/7 Monitoring",
+        description: "Continuous surveillance of dark web and threat sources",
+        points: ["Automatic marketplace scanning", "Real-time alerts", "Multiple data sources", "API for integration"],
+      },
+      detection: {
+        title: "Advanced Detection",
+        description: "AI and machine learning to identify threats",
+        points: [
+          "Intelligent detection algorithms",
+          "Suspicious pattern analysis",
+          "Data correlation",
+          "Low false positive rate",
+        ],
+      },
+    },
+
+    // Pricing
+    pricing: {
+      tag: "Pricing",
+      title: "Choose the perfect plan",
+      subtitle: "Flexible options for companies of all sizes",
+      monthly: "/month",
+      popularBadge: "Most Popular",
+      openSource: {
+        name: "Open Source",
+        price: "Free",
+        description: "For developers and small teams",
+        features: ["Complete source code", "Local installation", "Community support", "Complete documentation"],
+        cta: "Download Now",
+      },
+      cloud: {
+        name: "Cloud",
+        price: "$19",
+        period: "/month",
+        description: "For companies that want ease",
+        features: ["Managed hosting", "Automatic backup", "Technical support", "Automatic updates", "SSL included"],
+        cta: "Start Trial",
+      },
+      enterprise: {
+        name: "Enterprise",
+        price: "Custom",
+        description: "For large organizations",
+        features: ["Dedicated installation", "24/7 support", "Guaranteed SLA", "Training included", "Customizations"],
+        cta: "Contact Sales",
+      },
+    },
+
+    // Footer
+    footer: {
+      company: {
+        title: "Company",
+        about: "About",
+        careers: "Careers",
+        contact: "Contact",
+      },
+      resources: {
+        title: "Resources",
+        documentation: "Documentation",
+        blog: "Blog",
+        guides: "Guides",
+      },
+      legal: {
+        title: "Legal",
+        terms: "Terms of Service",
+        privacy: "Privacy Policy",
+        security: "Security",
+      },
+      social: {
+        title: "Social",
+      },
+      copyright: "All rights reserved.",
+    },
+
+    // Auth
     auth: {
       login: {
         title: "Sign In",
-        subtitle: "Sign in to your account to continue",
-        email: "Email",
-        emailPlaceholder: "Enter your email",
-        password: "Password",
-        passwordPlaceholder: "Enter your password",
-        rememberMe: "Remember me",
-        forgotPassword: "Forgot password?",
-        signIn: "Sign In",
-        signingIn: "Signing in...",
-        noAccount: "Don't have an account?",
-        signUp: "Sign up",
-        errors: {
-          emailRequired: "Email is required",
-          passwordRequired: "Password is required",
-          invalidCredentials: "Invalid email or password",
-          serverError: "Server error. Please try again.",
-        },
-      },
-      register: {
-        title: "Create Account",
-        subtitle: "Create your account to get started",
-        firstName: "First Name",
-        firstNamePlaceholder: "Enter your first name",
-        lastName: "Last Name",
-        lastNamePlaceholder: "Enter your last name",
-        email: "Email",
-        emailPlaceholder: "Enter your email",
+        subtitle: "Access your BreachHawk account",
         username: "Username",
         usernamePlaceholder: "Enter your username",
         password: "Password",
         passwordPlaceholder: "Enter your password",
+        loginButton: "Sign In",
+        loggingIn: "Signing in...",
+        forgotPassword: "Forgot password?",
+        or: "or",
+        googleLogin: "Sign in with Google",
+        noAccount: "Don't have an account?",
+        register: "Sign up",
+        testCredentials: "Test credentials:",
+        adminCredentials: "Admin: admin / admin123",
+        userCredentials: "User: user / user123",
+      },
+      register: {
+        title: "Create Account",
+        stepOf: "of",
+        step1: "Basic information",
+        step2: "Personal information",
+        username: "Username",
+        usernamePlaceholder: "Enter a username",
+        email: "Email",
+        emailPlaceholder: "Enter your email",
+        password: "Password",
+        passwordPlaceholder: "Enter a password",
         confirmPassword: "Confirm Password",
         confirmPasswordPlaceholder: "Confirm your password",
-        agreeTerms: "I agree to the terms and conditions",
-        signUp: "Sign Up",
-        signingUp: "Signing up...",
+        firstName: "First Name",
+        firstNamePlaceholder: "Enter your first name",
+        lastName: "Last Name",
+        lastNamePlaceholder: "Enter your last name",
+        company: "Company",
+        companyPlaceholder: "Enter your company (optional)",
+        jobTitle: "Job Title",
+        jobTitlePlaceholder: "Enter your job title (optional)",
+        terms: "I accept the",
+        termsLink: "Terms of Service",
+        and: "and",
+        privacyLink: "Privacy Policy",
+        next: "Next",
+        back: "Back",
+        register: "Create Account",
+        registering: "Creating...",
         hasAccount: "Already have an account?",
-        signIn: "Sign in",
+        login: "Sign in",
         errors: {
+          usernameRequired: "Username is required",
+          emailRequired: "Email is required",
+          passwordRequired: "Password is required",
+          passwordMismatch: "Passwords don't match",
           firstNameRequired: "First name is required",
           lastNameRequired: "Last name is required",
-          emailRequired: "Email is required",
-          usernameRequired: "Username is required",
-          passwordRequired: "Password is required",
-          passwordMismatch: "Passwords do not match",
-          termsRequired: "You must agree to the terms",
-          serverError: "Server error. Please try again.",
+          termsRequired: "You must accept the terms",
         },
       },
       forgotPassword: {
-        title: "Forgot Password",
-        subtitle: "Enter your email or username to recover your password",
-        identifier: "Email or Username",
-        identifierPlaceholder: "Enter your email or username",
-        send: "Send Recovery Link",
+        title: "Recover Password",
+        subtitle: "Enter your email to receive instructions",
+        email: "Email",
+        emailPlaceholder: "Enter your email",
+        send: "Send Instructions",
         sending: "Sending...",
-        success: {
-          title: "Email Sent!",
-          message: "If the user exists, you will receive an email with instructions to reset your password.",
-        },
-        errors: {
-          identifierRequired: "Email or username is required",
-          serverError: "Server error. Please try again.",
-        },
+        success: "Instructions sent! Check your email.",
+        back: "Back to Login",
       },
       resetPassword: {
         title: "Reset Password",
         subtitle: "Enter your new password",
         password: "New Password",
         passwordPlaceholder: "Enter your new password",
-        confirmPassword: "Confirm New Password",
+        confirmPassword: "Confirm Password",
         confirmPasswordPlaceholder: "Confirm your new password",
         reset: "Reset Password",
         resetting: "Resetting...",
-        success: "Password reset successfully! Redirecting to login...",
+        success: "Password reset successfully! Redirecting...",
         errors: {
-          passwordRequired: "New password is required",
-          passwordMismatch: "Passwords do not match",
+          passwordRequired: "Password is required",
+          passwordMismatch: "Passwords don't match",
           invalidToken: "Invalid or expired token",
-          serverError: "Server error. Please try again.",
         },
       },
     },
-    dashboard: {
-      title: "Dashboard",
-      welcome: "Welcome",
-      stats: {
-        totalSites: "Total Sites",
-        activeSites: "Active Sites",
-        totalScrapers: "Total Scrapers",
-        activeScrapers: "Active Scrapers",
+
+    // Settings
+    settings: {
+      title: "Settings",
+      subtitle: "Manage your personal information and preferences",
+      profile: {
+        title: "Profile Information",
+        subtitle: "Update your personal information",
+        email: "Email",
+        emailDisabled: "Email cannot be changed",
+        organization: "Organization",
+        organizationPlaceholder: "Your organization name",
+        contact: "Contact",
+        contactPlaceholder: "Phone or other contact method",
+        language: "Language",
+        languageSubtitle: "Choose your preferred language",
+        subscribed: "Receive platform communications",
+        changePhoto: "Change Photo",
+        photoFormat: "JPG, PNG up to 2MB",
+        saveChanges: "Save Changes",
+        saving: "Saving...",
+        profileUpdated: "Profile updated successfully!",
+        profileError: "Error updating profile",
+      },
+      password: {
+        title: "Change Password",
+        subtitle: "Keep your account secure with a strong password",
+        currentPassword: "Current Password",
+        newPassword: "New Password",
+        confirmPassword: "Confirm New Password",
+        changePassword: "Change Password",
+        changing: "Changing...",
+        passwordsNotMatch: "Passwords do not match",
+        passwordChanged: "Password changed successfully!",
+        passwordError: "Error changing password",
+      },
+      notifications: {
+        title: "Notification Preferences",
+        subtitle: "Configure how you want to receive notifications",
+        emailAlerts: "Email Alerts",
+        emailAlertsDesc: "Receive alerts when new leaks are detected",
+        smsAlerts: "SMS Alerts",
+        smsAlertsDesc: "Receive SMS alerts for critical leaks",
+        weeklyReport: "Weekly Report",
+        weeklyReportDesc: "Receive a weekly summary of activities",
+        savePreferences: "Save Preferences",
+      },
+      security: {
+        title: "Security Settings",
+        subtitle: "Manage your account security",
+        twoFactor: "Two-Factor Authentication",
+        twoFactorDesc: "Add an extra layer of security",
+        sessions: "Active Sessions",
+        sessionsDesc: "Manage your active sessions",
+        loginHistory: "Login History",
+        loginHistoryDesc: "View your recent access history",
       },
     },
-    navigation: {
-      dashboard: "Dashboard",
-      sites: "Sites",
-      settings: "Settings",
-      logout: "Logout",
+
+    // Admin
+    admin: {
+      settings: {
+        title: "Administrative Settings",
+        subtitle: "Manage your company settings and users",
+        company: {
+          title: "Company Information",
+          subtitle: "Configure your company's basic information",
+          name: "Company Name",
+          namePlaceholder: "Enter company name",
+          domain: "Primary Domain",
+          domainPlaceholder: "example.com",
+          website: "Website",
+          websitePlaceholder: "https://www.example.com",
+          phone: "Phone",
+          phonePlaceholder: "(11) 99999-9999",
+          description: "Description",
+          descriptionPlaceholder: "Describe your company...",
+          address: "Address",
+          addressPlaceholder: "Complete company address",
+          saveSettings: "Save Settings",
+          settingsSaved: "Company settings saved successfully!",
+        },
+        branding: {
+          title: "Brand Customization",
+          subtitle: "Customize the platform appearance for your company",
+          primaryColor: "Primary Color",
+          secondaryColor: "Secondary Color",
+          logoUrl: "Logo URL",
+          logoPlaceholder: "https://example.com/logo.png",
+          customCss: "Custom CSS",
+          customCssPlaceholder: "/* Add your custom CSS here */",
+          showBranding: "Show company brand in interface",
+          upload: "Upload",
+          saveBranding: "Save Customization",
+          brandingSaved: "Brand settings saved successfully!",
+        },
+        users: {
+          title: "User Management",
+          subtitle: "Manage your company users",
+          addUser: "Add User",
+          name: "Name",
+          email: "Email",
+          role: "Role",
+          status: "Status",
+          lastLogin: "Last Login",
+          actions: "Actions",
+          admin: "Admin",
+          user: "User",
+          active: "Active",
+          inactive: "Inactive",
+          activate: "Activate",
+          deactivate: "Deactivate",
+          edit: "Edit",
+          userActivated: "User activated successfully!",
+          userDeactivated: "User deactivated successfully!",
+        },
+        domains: {
+          title: "Domain Management",
+          subtitle: "Configure domains monitored by your company",
+          addDomain: "Add",
+          addDomainPlaceholder: "Add new domain (ex: example.com)",
+          monitoredDomains: "Monitored Domains",
+          configure: "Configure",
+        },
+      },
     },
   },
 }
-
-export function getTranslations(language: string): Translations {
-  return translations[language] || translations.pt
-}
-
-export function t(key: string, language = "pt"): string {
-  const trans = getTranslations(language)
-  const keys = key.split(".")
-  let value: any = trans
-
-  for (const k of keys) {
-    value = value?.[k]
-  }
-
-  return value || key
-}
-
-export { translations }
